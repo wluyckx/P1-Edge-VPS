@@ -4,9 +4,10 @@
   <project>P1-Edge-VPS Energy Telemetry Platform</project>
   <last_updated>2026-02-13</last_updated>
   <total_stories>15</total_stories>
-  <done>7</done>
-  <progress>47%</progress>
+  <done>9</done>
+  <progress>60%</progress>
   <changelog>
+    <entry date="2026-02-13">Wave 3: STORY-005 (batch uploader) + STORY-009 (ingest API) done. Review fixes: lazy auth init via get_settings(), poller catch-all exception, normalizer tz-aware enforcement, spool peek guard, token parse warning logs. 168 tests, 0 failures.</entry>
     <entry date="2026-02-13">Wave 2: STORY-002..004 (edge) + STORY-007..008 (VPS) done. Review fixes: standardize VPS imports to src.X, edge conftest future annotations, remove direct port 8000 binding, monkeypatch config tests, fix .env.example asyncpg URL, add requirements-dev.txt. 121 tests, 0 failures.</entry>
     <entry date="2026-02-13">Fix 7 backlog issues: canonical ingest contract (wrapped object), device_id auth matching AC, HTTPS enforcement ACs, sync cross-file drift, trim rolling 12-month from STORY-011, create technicaldesign.md, add contract dependency note to STORY-005</entry>
     <entry date="2026-02-13">Initial backlog creation (15 stories across 3 phases)</entry>
@@ -298,7 +299,7 @@
   </notes>
 </story>
 
-<story id="STORY-005" status="pending" complexity="L" tdd="required">
+<story id="STORY-005" status="done" complexity="L" tdd="required">
   <title>Batch uploader with retry</title>
   <dependencies>STORY-002, STORY-003, STORY-004</dependencies>
   <description>
@@ -483,7 +484,7 @@
   </notes>
 </story>
 
-<story id="STORY-009" status="pending" complexity="L" tdd="required">
+<story id="STORY-009" status="done" complexity="L" tdd="required">
   <title>Ingest API endpoint</title>
   <dependencies>STORY-007, STORY-008</dependencies>
   <description>
@@ -775,12 +776,12 @@
 
 <progress>
   <phase_summary>
-    <phase id="1" name="Edge Foundation" stories="5" done="4" progress="80%" link="stories/phase-1-edge-foundation.md" />
-    <phase id="2" name="VPS Foundation" stories="4" done="3" progress="75%" link="stories/phase-2-vps-foundation.md" />
+    <phase id="1" name="Edge Foundation" stories="5" done="5" progress="100%" link="stories/phase-1-edge-foundation.md" />
+    <phase id="2" name="VPS Foundation" stories="4" done="4" progress="100%" link="stories/phase-2-vps-foundation.md" />
     <phase id="3" name="API Features" stories="4" done="0" progress="0%" link="stories/phase-3-api-features.md" />
     <phase id="4" name="Production Readiness" stories="2" done="0" progress="0%" />
   </phase_summary>
-  <total stories="15" done="7" progress="47%" />
+  <total stories="15" done="9" progress="60%" />
 </progress>
 
 <!-- ============================================================ -->

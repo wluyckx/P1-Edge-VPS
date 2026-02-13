@@ -2,7 +2,7 @@
 
 **Status**: Not Started
 **Stories**: 4
-**Completed**: 3
+**Completed**: 4
 **Depends On**: None (can be developed in parallel with Phase 1)
 
 ---
@@ -195,7 +195,7 @@ This phase is complete when:
 
 ---
 
-<story id="STORY-009" status="pending" complexity="L" tdd="required">
+<story id="STORY-009" status="done" complexity="L" tdd="required">
   <title>Ingest API endpoint</title>
   <dependencies>STORY-007, STORY-008</dependencies>
 

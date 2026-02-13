@@ -2,7 +2,7 @@
 
 **Status**: Not Started
 **Stories**: 5
-**Completed**: 4
+**Completed**: 5
 **Depends On**: None
 
 ---
@@ -233,7 +233,7 @@ This phase is complete when:
 
 ---
 
-<story id="STORY-005" status="pending" complexity="L" tdd="required">
+<story id="STORY-005" status="done" complexity="L" tdd="required">
   <title>Batch uploader with retry</title>
   <dependencies>STORY-002, STORY-003, STORY-004</dependencies>
 
