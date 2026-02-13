@@ -1,0 +1,16 @@
+[project]
+name = "p1-edge"
+version = "0.1.0"
+description = "Edge daemon for P1-Edge-VPS energy telemetry"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["..", "."]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM"]

@@ -1,0 +1,23 @@
+services:
+  edge:
+    build:
+      context: ./edge
+      dockerfile: Dockerfile
+    container_name: p1-edge
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - HW_P1_HOST=${HW_P1_HOST}
+      - HW_P1_TOKEN=${HW_P1_TOKEN}
+      - VPS_INGEST_URL=${VPS_INGEST_URL}
+      - VPS_DEVICE_TOKEN=${VPS_DEVICE_TOKEN}
+      - POLL_INTERVAL_S=${POLL_INTERVAL_S:-2}
+      - BATCH_SIZE=${BATCH_SIZE:-30}
+      - UPLOAD_INTERVAL_S=${UPLOAD_INTERVAL_S:-10}
+      - SPOOL_PATH=/data/spool.db
+    volumes:
+      - p1_edge_data:/data
+
+volumes:
+  p1_edge_data:
