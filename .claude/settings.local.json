@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nBootstrap project governance docs\n\nInitialize P1-Edge-VPS with all four core governance artifacts:\n- CLAUDE.md \\(agent operating manual, gates, TDD, security\\)\n- Architecture.md \\(tech stack, directory structure, ADRs\\)\n- technicaldesign.md \\(DB schema, API contracts, validation\\)\n- docs/BACKLOG.md \\(15 stories across 4 phases\\)\n- Story files, SKILL.md, .env.example, .gitignore\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(pip install:*)",
+      "Bash(/Users/Wim/.local/bin/python3.12:*)",
+      "Bash(source:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(ruff check:*)",
+      "Bash(ruff format:*)",
+      "Bash(git status:*)",
+      "Bash(git commit:*)",
+      "Bash(pytest:*)",
+      "Bash(DEVICE_TOKENS=\"test:dev1\" DATABASE_URL=\"postgresql+asyncpg://u:p@localhost/db\" REDIS_URL=\"redis://localhost:6379/0\" pytest:*)",
+      "Bash(.venv/bin/ruff check vps/src/)",
+      "Bash(../.venv/bin/python -m pytest:*)",
+      "Bash(.venv/bin/ruff check:*)",
+      "Bash(/Users/Wim/P1-Edge-VPS/.venv/bin/ruff check:*)",
+      "Bash(python3.12:*)",
+      "Bash(python3.11:*)",
+      "Bash(/Users/Wim/P1-Edge-VPS/.venv/bin/python -m pytest:*)",
+      "Bash(/Users/Wim/P1-Edge-VPS/.venv/bin/python:*)",
+      "Bash(git push)",
+      "Bash(.venv/bin/python -m pytest:*)",
+      "Bash(make check:*)"
+    ]
+  }
+}
