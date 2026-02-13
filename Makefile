@@ -1,13 +1,16 @@
 .PHONY: test test-edge test-vps lint lint-edge lint-vps check
 
-# Run all tests (per-component to avoid import collisions)
-test: test-edge test-vps
+PYTHON := .venv/bin/python
+
+# Run all tests (root pyproject.toml handles import isolation)
+test:
+	$(PYTHON) -m pytest edge/tests/ vps/tests/ -q
 
 test-edge:
-	cd edge && python -m pytest tests/ -q
+	$(PYTHON) -m pytest edge/tests/ -q
 
 test-vps:
-	cd vps && python -m pytest tests/ -q
+	$(PYTHON) -m pytest vps/tests/ -q
 
 # Run lint checks
 lint: lint-edge lint-vps

@@ -6,6 +6,7 @@ against the authenticated device_id, performs idempotent database inserts,
 and invalidates the Redis cache for the device.
 
 CHANGELOG:
+- 2026-02-13: Reject empty sample batches with min_length=1 (quality fix #2)
 - 2026-02-13: Initial creation (STORY-009)
 
 TODO:
@@ -16,7 +17,7 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.api.deps import CurrentDeviceId, DbSession
 from src.cache.redis_client import invalidate_device_cache
@@ -59,7 +60,7 @@ class IngestRequest(BaseModel):
         samples: List of energy telemetry samples to ingest.
     """
 
-    samples: list[SampleCreate]
+    samples: list[SampleCreate] = Field(min_length=1)
 
 
 class IngestResponse(BaseModel):

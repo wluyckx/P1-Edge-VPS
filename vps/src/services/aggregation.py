@@ -7,6 +7,7 @@ year, and all-time frames. Queries pre-computed materialized views
 (p1_hourly, p1_daily, p1_monthly) for improved performance.
 
 CHANGELOG:
+- 2026-02-13: Fix average-of-averages: use weighted avg in rebucket (quality fix #1)
 - 2026-02-13: Query continuous aggregates instead of raw p1_samples (STORY-013)
 - 2026-02-13: Initial creation (STORY-012)
 
@@ -118,11 +119,15 @@ async def get_aggregated_series(
 
     if rebucket is not None:
         # Re-aggregate the pre-computed view into larger buckets.
+        # Use weighted average (by sample_count) to avoid the
+        # average-of-averages error where low-sample buckets get
+        # disproportionate weight.
         bucket_expr = "time_bucket(:interval, bucket)"
         params["interval"] = rebucket
         base_sql = (
             f"SELECT {bucket_expr} AS bucket, "
-            "AVG(avg_power_w)::integer AS avg_power_w, "
+            "(SUM(avg_power_w::bigint * sample_count) "
+            "/ NULLIF(SUM(sample_count), 0))::integer AS avg_power_w, "
             "MAX(max_power_w) AS max_power_w, "
             "SUM(energy_import_kwh) AS energy_import_kwh, "
             "SUM(energy_export_kwh) AS energy_export_kwh "

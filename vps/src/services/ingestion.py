@@ -5,6 +5,7 @@ Provides the core database operation for bulk-inserting samples using
 PostgreSQL INSERT ... ON CONFLICT DO NOTHING for idempotent ingestion.
 
 CHANGELOG:
+- 2026-02-13: Guard against empty sample list (quality fix #2)
 - 2026-02-13: Initial creation (STORY-009)
 
 TODO:
@@ -32,6 +33,9 @@ async def ingest_samples(session: AsyncSession, samples: list[dict]) -> int:
     Returns:
         int: Number of newly inserted rows (excludes duplicates).
     """
+    if not samples:
+        return 0
+
     stmt = insert(P1Sample).values(samples).on_conflict_do_nothing(
         index_elements=["device_id", "ts"],
     )

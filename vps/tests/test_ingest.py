@@ -247,6 +247,14 @@ class TestIngestValidation:
         )
         assert response.status_code == 422
 
+    def test_empty_samples_list_returns_422(self, client: TestClient) -> None:
+        """Empty samples list → 422 (min_length=1 validation)."""
+        response = client.post(
+            "/v1/ingest",
+            json={"samples": []},
+        )
+        assert response.status_code == 422
+
 
 # ---------------------------------------------------------------------------
 # AC6: Missing / invalid auth → 401
@@ -382,6 +390,17 @@ class TestIngestionService:
         assert count == 3
         session.execute.assert_awaited_once()
         session.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio()
+    async def test_ingest_samples_empty_list_returns_zero(self) -> None:
+        """ingest_samples returns 0 immediately for empty list."""
+        from src.services.ingestion import ingest_samples
+
+        session = AsyncMock()
+        count = await ingest_samples(session, [])
+
+        assert count == 0
+        session.execute.assert_not_awaited()
 
     @pytest.mark.asyncio()
     async def test_ingest_samples_returns_zero_on_all_conflicts(self) -> None:

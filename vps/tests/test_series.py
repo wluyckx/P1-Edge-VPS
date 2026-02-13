@@ -430,6 +430,24 @@ class TestAggregationService:
         assert "p1_samples" not in executed_sql
 
     @pytest.mark.asyncio()
+    async def test_month_rebucket_uses_weighted_average(self) -> None:
+        """Rebucket uses sample_count weighted average, not AVG(avg_power_w)."""
+        from src.services.aggregation import get_aggregated_series
+
+        session = AsyncMock()
+        result = MagicMock()
+        result.fetchall.return_value = []
+        session.execute.return_value = result
+
+        await get_aggregated_series(session, "dev1", "month")
+
+        executed_sql = str(
+            session.execute.call_args[0][0].text,
+        )
+        assert "sample_count" in executed_sql
+        assert "AVG(avg_power_w)" not in executed_sql
+
+    @pytest.mark.asyncio()
     async def test_get_aggregated_series_year_queries_p1_monthly(
         self,
     ) -> None:
