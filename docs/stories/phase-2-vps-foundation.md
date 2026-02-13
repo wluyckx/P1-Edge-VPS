@@ -2,7 +2,7 @@
 
 **Status**: Not Started
 **Stories**: 4
-**Completed**: 1
+**Completed**: 3
 **Depends On**: None (can be developed in parallel with Phase 1)
 
 ---
@@ -79,7 +79,7 @@ This phase is complete when:
 
 ---
 
-<story id="STORY-007" status="pending" complexity="M" tdd="required">
+<story id="STORY-007" status="done" complexity="M" tdd="required">
   <title>Database schema + TimescaleDB hypertable</title>
   <dependencies>STORY-006</dependencies>
 
@@ -142,7 +142,7 @@ This phase is complete when:
 
 ---
 
-<story id="STORY-008" status="pending" complexity="S" tdd="required">
+<story id="STORY-008" status="done" complexity="S" tdd="required">
   <title>Device authentication (Bearer tokens)</title>
   <dependencies>STORY-006</dependencies>
 
