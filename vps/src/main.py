@@ -2,6 +2,8 @@
 FastAPI application entry point for the VPS API.
 
 Provides the health endpoint and serves as the root application factory.
+Structured JSON logging is configured at module import time so that all
+log output (including uvicorn access logs) uses the JSON format.
 
 CHANGELOG:
 - 2026-02-13: Initial creation (STORY-006)
@@ -10,6 +12,8 @@ CHANGELOG:
 - 2026-02-13: Register capacity router (STORY-011)
 - 2026-02-13: Register series router (STORY-012)
 - 2026-02-13: Add startup lifespan to eagerly validate DEVICE_TOKENS
+- 2026-02-13: Register health router (STORY-014)
+- 2026-02-13: Structured JSON logging, graceful shutdown logging (STORY-015)
 
 TODO:
 - None
@@ -23,19 +27,35 @@ from fastapi import FastAPI
 
 from src.api.capacity import router as capacity_router
 from src.api.deps import init_bearer_auth
+from src.api.health import router as health_router
 from src.api.ingest import router as ingest_router
 from src.api.realtime import router as realtime_router
 from src.api.series import router as series_router
+from src.logging_config import setup_logging
+
+# Configure structured JSON logging before anything else logs.
+setup_logging()
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan: eagerly validate auth config at startup."""
+    """Application lifespan: startup validation and graceful shutdown logging.
+
+    Startup:
+        - Validates DEVICE_TOKENS via ``init_bearer_auth()``.
+        - Logs that the VPS API is ready.
+
+    Shutdown:
+        - Logs that the VPS API is shutting down (uvicorn completes in-flight
+          requests before reaching this point).
+    """
     init_bearer_auth()
     logger.info("DEVICE_TOKENS validated at startup")
+    logger.info("VPS API ready")
     yield
+    logger.info("VPS API shutting down, in-flight requests completed")
 
 
 app = FastAPI(
@@ -46,6 +66,7 @@ app = FastAPI(
 )
 
 app.include_router(capacity_router)
+app.include_router(health_router)
 app.include_router(ingest_router)
 app.include_router(realtime_router)
 app.include_router(series_router)

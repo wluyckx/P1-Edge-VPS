@@ -1,5 +1,5 @@
 """
-Edge daemon entry point — poll loop + upload loop using threading.
+Edge daemon entry point -- poll loop + upload loop using threading.
 
 Runs two threads:
 1. **Poll thread**: polls the HomeWizard P1 meter at ``poll_interval_s``,
@@ -8,22 +8,28 @@ Runs two threads:
    VPS ingest endpoint at ``upload_interval_s``, with exponential backoff
    on failure.
 
-Both threads run as daemon threads so the process exits cleanly on
-KeyboardInterrupt (Ctrl-C).
+Handles SIGTERM and SIGINT for graceful shutdown inside Docker:
+- Sets a ``shutdown_event`` that stops both loops.
+- Flushes pending uploads before exiting.
+- Closes the spool.
 
 CHANGELOG:
 - 2026-02-13: Initial creation (STORY-005)
+- 2026-02-13: Structured JSON logging, graceful shutdown, signal
+              handling (STORY-015)
 
 TODO:
 - None
 """
 
 import logging
+import signal
 import threading
-import time
 from datetime import UTC, datetime
+from types import FrameType
 
 from edge.src.config import EdgeSettings
+from edge.src.logging_config import setup_logging
 from edge.src.normalizer import normalize
 from edge.src.poller import poll_measurement
 from edge.src.spool import Spool
@@ -31,10 +37,8 @@ from edge.src.uploader import Uploader
 
 logger = logging.getLogger(__name__)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-)
+# Module-level shutdown event shared between signal handlers and loops.
+shutdown_event = threading.Event()
 
 
 def _poll_loop(
@@ -43,16 +47,16 @@ def _poll_loop(
 ) -> None:
     """Continuously poll the P1 meter and enqueue samples.
 
-    Runs forever. On each iteration:
+    Runs until ``shutdown_event`` is set. On each iteration:
     1. Poll the HomeWizard P1 meter.
     2. Normalize the raw reading.
     3. Enqueue the normalized sample into the spool.
-    4. Sleep for ``poll_interval_s``.
+    4. Sleep for ``poll_interval_s`` (interruptible).
 
     Any single-poll failure is logged and skipped (the loop continues).
     """
     device_id = settings.device_id
-    while True:
+    while not shutdown_event.is_set():
         try:
             raw = poll_measurement(
                 host=settings.hw_p1_host,
@@ -69,7 +73,7 @@ def _poll_loop(
         except Exception:
             logger.exception("Unexpected error in poll loop")
 
-        time.sleep(settings.poll_interval_s)
+        shutdown_event.wait(timeout=settings.poll_interval_s)
 
 
 def _upload_loop(
@@ -78,12 +82,12 @@ def _upload_loop(
 ) -> None:
     """Continuously upload batches from the spool to the VPS.
 
-    Runs forever. On each iteration:
+    Runs until ``shutdown_event`` is set. On each iteration:
     1. Attempt ``upload_batch()``.
     2. On failure, sleep for the current backoff duration.
     3. On success or empty spool, sleep for ``upload_interval_s``.
     """
-    while True:
+    while not shutdown_event.is_set():
         try:
             success = uploader.upload_batch()
         except Exception:
@@ -91,7 +95,7 @@ def _upload_loop(
             success = False
 
         if success:
-            time.sleep(settings.upload_interval_s)
+            delay = settings.upload_interval_s
         else:
             # Use the larger of upload_interval and current backoff,
             # so we never upload faster than the configured interval.
@@ -99,16 +103,50 @@ def _upload_loop(
                 settings.upload_interval_s,
                 uploader.current_backoff,
             )
-            time.sleep(delay)
+
+        shutdown_event.wait(timeout=delay)
+
+
+def _flush_uploads(uploader: Uploader) -> None:
+    """Attempt one final upload batch to flush pending samples.
+
+    Called during graceful shutdown to drain the spool as much as
+    possible before the process exits.
+    """
+    logger.info("Flushing pending uploads before shutdown")
+    try:
+        flushed = uploader.upload_batch()
+        if flushed:
+            logger.info("Final upload flush succeeded")
+        else:
+            logger.info("No pending samples to flush (or flush failed)")
+    except Exception:
+        logger.exception("Error during final upload flush")
+
+
+def _signal_handler(
+    signum: int,
+    _frame: FrameType | None,
+) -> None:
+    """Handle SIGTERM/SIGINT by signalling shutdown.
+
+    Sets ``shutdown_event`` so all loops exit cleanly.
+    """
+    sig_name = signal.Signals(signum).name
+    logger.info("Received %s, initiating graceful shutdown", sig_name)
+    shutdown_event.set()
 
 
 def main() -> None:
     """Edge daemon entry point.
 
     Loads configuration from environment variables, creates the spool
-    and uploader, then starts poll and upload threads. The main thread
-    blocks until interrupted (Ctrl-C).
+    and uploader, registers signal handlers, then starts poll and upload
+    threads. The main thread blocks on ``shutdown_event`` until a signal
+    is received, then flushes pending uploads and closes the spool.
     """
+    setup_logging()
+
     settings = EdgeSettings()
 
     spool = Spool(path=settings.spool_path)
@@ -119,8 +157,12 @@ def main() -> None:
         batch_size=settings.batch_size,
     )
 
+    # Register signal handlers for graceful shutdown (AC4).
+    signal.signal(signal.SIGTERM, _signal_handler)
+    signal.signal(signal.SIGINT, _signal_handler)
+
     logger.info(
-        "Edge daemon starting — poll every %ds, upload every %ds, "
+        "Edge daemon starting -- poll every %ds, upload every %ds, "
         "batch size %d",
         settings.poll_interval_s,
         settings.upload_interval_s,
@@ -143,13 +185,20 @@ def main() -> None:
     poll_thread.start()
     upload_thread.start()
 
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        logger.info("Edge daemon shutting down")
-    finally:
-        spool.close()
+    # Block until a signal sets the shutdown event.
+    shutdown_event.wait()
+
+    logger.info("Shutdown event received, stopping loops")
+
+    # Give threads a moment to exit their current iteration.
+    poll_thread.join(timeout=5)
+    upload_thread.join(timeout=5)
+
+    # Flush any remaining samples before exit (AC2).
+    _flush_uploads(uploader)
+
+    spool.close()
+    logger.info("Edge daemon shut down cleanly")
 
 
 if __name__ == "__main__":

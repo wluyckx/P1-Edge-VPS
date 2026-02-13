@@ -1,11 +1,13 @@
 """
-Tests for the series API endpoint (STORY-012).
+Tests for the series API endpoint (STORY-012, STORY-013).
 
 Validates GET /v1/series: frame parameter validation, aggregated series
 response structure, empty data handling, and all supported time frames
-(day, month, year, all).
+(day, month, year, all). Verifies that queries target continuous aggregate
+views (p1_hourly, p1_daily, p1_monthly) instead of raw p1_samples.
 
 CHANGELOG:
+- 2026-02-13: Update tests for continuous aggregate views (STORY-013)
 - 2026-02-13: Initial creation (STORY-012)
 
 TODO:
@@ -147,7 +149,7 @@ def empty_client(empty_db_session: AsyncMock) -> TestClient:
 
 
 # ---------------------------------------------------------------------------
-# AC7: Invalid frame → 400 Bad Request
+# AC7: Invalid frame -> 400 Bad Request
 # ---------------------------------------------------------------------------
 
 
@@ -175,12 +177,12 @@ class TestSeriesInvalidFrame:
 
 
 # ---------------------------------------------------------------------------
-# AC2: frame=day → time_bucket('1 hour', ts) for today
+# AC2: frame=day -> query p1_hourly view for today
 # ---------------------------------------------------------------------------
 
 
 class TestSeriesFrameDay:
-    """Tests for frame=day aggregation."""
+    """Tests for frame=day aggregation using p1_hourly view."""
 
     def test_frame_day_returns_200_with_series(
         self, client: TestClient,
@@ -227,12 +229,12 @@ class TestSeriesFrameDay:
 
 
 # ---------------------------------------------------------------------------
-# AC3: frame=month → time_bucket('1 week', ts) for current month
+# AC3: frame=month -> re-bucket p1_daily to 1-week intervals
 # ---------------------------------------------------------------------------
 
 
 class TestSeriesFrameMonth:
-    """Tests for frame=month aggregation."""
+    """Tests for frame=month aggregation using p1_daily view."""
 
     def test_frame_month_returns_200_with_series(
         self, client: TestClient,
@@ -250,12 +252,12 @@ class TestSeriesFrameMonth:
 
 
 # ---------------------------------------------------------------------------
-# AC4: frame=year → time_bucket('1 month', ts) for current year
+# AC4: frame=year -> query p1_monthly view for current year
 # ---------------------------------------------------------------------------
 
 
 class TestSeriesFrameYear:
-    """Tests for frame=year aggregation."""
+    """Tests for frame=year aggregation using p1_monthly view."""
 
     def test_frame_year_returns_200_with_series(
         self, client: TestClient,
@@ -273,12 +275,12 @@ class TestSeriesFrameYear:
 
 
 # ---------------------------------------------------------------------------
-# AC5: frame=all → time_bucket('1 month', ts) for all data
+# AC5: frame=all -> query p1_monthly view for all data
 # ---------------------------------------------------------------------------
 
 
 class TestSeriesFrameAll:
-    """Tests for frame=all aggregation."""
+    """Tests for frame=all aggregation using p1_monthly view."""
 
     def test_frame_all_returns_200_with_series(
         self, client: TestClient,
@@ -296,7 +298,7 @@ class TestSeriesFrameAll:
 
 
 # ---------------------------------------------------------------------------
-# AC8: No data in range → 200 with empty series array
+# AC8: No data in range -> 200 with empty series array
 # ---------------------------------------------------------------------------
 
 
@@ -325,7 +327,9 @@ class TestSeriesEmptyData:
                 "frame": frame,
             })
             assert response.status_code == 200
-            assert response.json()["series"] == [], f"frame={frame} not empty"
+            assert response.json()["series"] == [], (
+                f"frame={frame} not empty"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -375,8 +379,10 @@ class TestAggregationService:
     """Unit tests for the get_aggregated_series service function."""
 
     @pytest.mark.asyncio()
-    async def test_get_aggregated_series_day(self) -> None:
-        """Service returns correctly structured dicts for frame=day."""
+    async def test_get_aggregated_series_day_queries_p1_hourly(
+        self,
+    ) -> None:
+        """AC5: frame=day queries p1_hourly view directly."""
         from src.services.aggregation import get_aggregated_series
 
         session = AsyncMock()
@@ -391,9 +397,67 @@ class TestAggregationService:
         assert series[0]["avg_power_w"] == 350
         session.execute.assert_awaited_once()
 
+        # Verify SQL targets p1_hourly, not p1_samples.
+        executed_sql = str(
+            session.execute.call_args[0][0].text,
+        )
+        assert "p1_hourly" in executed_sql
+        assert "p1_samples" not in executed_sql
+
     @pytest.mark.asyncio()
-    async def test_get_aggregated_series_all_no_date_filter(self) -> None:
-        """Service for frame=all omits date range (no WHERE ts clause)."""
+    async def test_get_aggregated_series_month_queries_p1_daily(
+        self,
+    ) -> None:
+        """AC5: frame=month queries p1_daily with time_bucket rebucket."""
+        from src.services.aggregation import get_aggregated_series
+
+        session = AsyncMock()
+        result = MagicMock()
+        result.fetchall.return_value = SAMPLE_ROWS
+        session.execute.return_value = result
+
+        series = await get_aggregated_series(session, "dev1", "month")
+
+        assert len(series) == 2
+        session.execute.assert_awaited_once()
+
+        # Verify SQL targets p1_daily with time_bucket re-aggregation.
+        executed_sql = str(
+            session.execute.call_args[0][0].text,
+        )
+        assert "p1_daily" in executed_sql
+        assert "time_bucket" in executed_sql
+        assert "p1_samples" not in executed_sql
+
+    @pytest.mark.asyncio()
+    async def test_get_aggregated_series_year_queries_p1_monthly(
+        self,
+    ) -> None:
+        """AC5: frame=year queries p1_monthly view directly."""
+        from src.services.aggregation import get_aggregated_series
+
+        session = AsyncMock()
+        result = MagicMock()
+        result.fetchall.return_value = SAMPLE_ROWS
+        session.execute.return_value = result
+
+        series = await get_aggregated_series(session, "dev1", "year")
+
+        assert len(series) == 2
+        session.execute.assert_awaited_once()
+
+        # Verify SQL targets p1_monthly, not p1_samples.
+        executed_sql = str(
+            session.execute.call_args[0][0].text,
+        )
+        assert "p1_monthly" in executed_sql
+        assert "p1_samples" not in executed_sql
+
+    @pytest.mark.asyncio()
+    async def test_get_aggregated_series_all_queries_p1_monthly(
+        self,
+    ) -> None:
+        """AC5: frame=all queries p1_monthly without date filter."""
         from src.services.aggregation import get_aggregated_series
 
         session = AsyncMock()
@@ -404,8 +468,16 @@ class TestAggregationService:
         series = await get_aggregated_series(session, "dev1", "all")
 
         assert len(series) == 2
-        # Verify execute was called (SQL correctness verified by integration)
         session.execute.assert_awaited_once()
+
+        # Verify SQL targets p1_monthly and has no date filter.
+        executed_sql = str(
+            session.execute.call_args[0][0].text,
+        )
+        assert "p1_monthly" in executed_sql
+        assert "p1_samples" not in executed_sql
+        assert ":start" not in executed_sql
+        assert ":end" not in executed_sql
 
     @pytest.mark.asyncio()
     async def test_get_aggregated_series_empty(self) -> None:
@@ -422,31 +494,115 @@ class TestAggregationService:
         assert series == []
 
     @pytest.mark.asyncio()
-    async def test_get_aggregated_series_month(self) -> None:
-        """Service returns data for frame=month."""
+    async def test_day_frame_includes_date_filter(self) -> None:
+        """frame=day includes bucket >= :start AND bucket < :end."""
         from src.services.aggregation import get_aggregated_series
 
         session = AsyncMock()
         result = MagicMock()
-        result.fetchall.return_value = SAMPLE_ROWS
+        result.fetchall.return_value = []
         session.execute.return_value = result
 
-        series = await get_aggregated_series(session, "dev1", "month")
+        await get_aggregated_series(session, "dev1", "day")
 
-        assert len(series) == 2
-        session.execute.assert_awaited_once()
+        executed_sql = str(
+            session.execute.call_args[0][0].text,
+        )
+        assert "bucket >= :start" in executed_sql
+        assert "bucket < :end" in executed_sql
 
     @pytest.mark.asyncio()
-    async def test_get_aggregated_series_year(self) -> None:
-        """Service returns data for frame=year."""
+    async def test_all_frame_no_date_filter(self) -> None:
+        """frame=all omits date range filter on bucket column."""
         from src.services.aggregation import get_aggregated_series
 
         session = AsyncMock()
         result = MagicMock()
-        result.fetchall.return_value = SAMPLE_ROWS
+        result.fetchall.return_value = []
         session.execute.return_value = result
 
-        series = await get_aggregated_series(session, "dev1", "year")
+        await get_aggregated_series(session, "dev1", "all")
 
-        assert len(series) == 2
-        session.execute.assert_awaited_once()
+        executed_sql = str(
+            session.execute.call_args[0][0].text,
+        )
+        assert ":start" not in executed_sql
+        assert ":end" not in executed_sql
+
+    @pytest.mark.asyncio()
+    async def test_month_rebucket_has_group_by(self) -> None:
+        """frame=month uses GROUP BY for time_bucket re-aggregation."""
+        from src.services.aggregation import get_aggregated_series
+
+        session = AsyncMock()
+        result = MagicMock()
+        result.fetchall.return_value = []
+        session.execute.return_value = result
+
+        await get_aggregated_series(session, "dev1", "month")
+
+        executed_sql = str(
+            session.execute.call_args[0][0].text,
+        )
+        assert "GROUP BY bucket" in executed_sql
+
+    @pytest.mark.asyncio()
+    async def test_day_direct_query_no_group_by(self) -> None:
+        """frame=day reads p1_hourly directly without GROUP BY."""
+        from src.services.aggregation import get_aggregated_series
+
+        session = AsyncMock()
+        result = MagicMock()
+        result.fetchall.return_value = []
+        session.execute.return_value = result
+
+        await get_aggregated_series(session, "dev1", "day")
+
+        executed_sql = str(
+            session.execute.call_args[0][0].text,
+        )
+        assert "GROUP BY" not in executed_sql
+
+
+# ---------------------------------------------------------------------------
+# FRAME_CONFIG structure tests
+# ---------------------------------------------------------------------------
+
+
+class TestFrameConfig:
+    """Tests for FRAME_CONFIG structure after STORY-013 changes."""
+
+    def test_frame_config_has_all_frames(self) -> None:
+        """FRAME_CONFIG contains all four frame types."""
+        from src.services.aggregation import FRAME_CONFIG
+
+        assert set(FRAME_CONFIG.keys()) == {"day", "month", "year", "all"}
+
+    def test_day_frame_uses_p1_hourly(self) -> None:
+        """AC5: day frame queries p1_hourly continuous aggregate."""
+        from src.services.aggregation import FRAME_CONFIG
+
+        assert FRAME_CONFIG["day"]["view"] == "p1_hourly"
+        assert FRAME_CONFIG["day"]["rebucket"] is None
+
+    def test_month_frame_uses_p1_daily(self) -> None:
+        """AC5: month frame queries p1_daily with 1-week rebucket."""
+        from src.services.aggregation import FRAME_CONFIG
+
+        assert FRAME_CONFIG["month"]["view"] == "p1_daily"
+        assert FRAME_CONFIG["month"]["rebucket"] == "1 week"
+
+    def test_year_frame_uses_p1_monthly(self) -> None:
+        """AC5: year frame queries p1_monthly continuous aggregate."""
+        from src.services.aggregation import FRAME_CONFIG
+
+        assert FRAME_CONFIG["year"]["view"] == "p1_monthly"
+        assert FRAME_CONFIG["year"]["rebucket"] is None
+
+    def test_all_frame_uses_p1_monthly(self) -> None:
+        """AC5: all frame queries p1_monthly continuous aggregate."""
+        from src.services.aggregation import FRAME_CONFIG
+
+        assert FRAME_CONFIG["all"]["view"] == "p1_monthly"
+        assert FRAME_CONFIG["all"]["rebucket"] is None
+        assert FRAME_CONFIG["all"]["range"] is None

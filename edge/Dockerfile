@@ -12,4 +12,6 @@ COPY src/ src/
 # Create data directory for SQLite spool persistence
 RUN mkdir -p /data
 
+STOPSIGNAL SIGTERM
+
 CMD ["python", "-m", "src.main"]
