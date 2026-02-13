@@ -12,10 +12,13 @@ TODO:
 - None
 """
 
+import logging
 import secrets
 
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+logger = logging.getLogger(__name__)
 
 
 def parse_device_tokens(raw: str) -> dict[str, str]:
@@ -39,6 +42,10 @@ def parse_device_tokens(raw: str) -> dict[str, str]:
     for entry in raw.split(","):
         entry = entry.strip()
         if ":" not in entry:
+            logger.warning(
+                "Skipping malformed DEVICE_TOKENS entry (no colon): %r",
+                entry,
+            )
             continue
         token, device_id = entry.split(":", maxsplit=1)
         token = token.strip()

@@ -344,3 +344,22 @@ class TestExtraFieldsIgnored:
             "energy_export_kwh",
         }
         assert set(result.keys()) == expected_keys
+
+
+# -----------------------------------------------------------
+# Test: naive (tz-unaware) timestamp is rejected
+# -----------------------------------------------------------
+
+
+class TestNaiveTimestampRejected:
+    """Naive timestamps must be rejected to enforce UTC contract."""
+
+    def test_naive_datetime_raises_value_error(
+        self,
+        valid_raw: dict,
+        sample_device_id: str,
+    ) -> None:
+        """Naive datetime (no tzinfo) raises ValueError."""
+        naive_ts = datetime(2026, 2, 13, 14, 30, 0)
+        with pytest.raises(ValueError, match="timezone-aware"):
+            normalize(valid_raw, sample_device_id, naive_ts)

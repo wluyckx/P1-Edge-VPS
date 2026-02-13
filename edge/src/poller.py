@@ -67,3 +67,7 @@ def poll_measurement(
     except httpx.ConnectError as exc:
         logger.warning("P1 poll connection error for %s: %s", url, exc)
         return None
+
+    except Exception as exc:
+        logger.warning("P1 poll unexpected error for %s: %s", url, exc)
+        return None

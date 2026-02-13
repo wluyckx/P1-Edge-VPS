@@ -52,6 +52,11 @@ def normalize(raw: dict, device_id: str, ts: datetime) -> dict:
     """
     _validate_required_fields(raw)
 
+    if ts.tzinfo is None:
+        raise ValueError(
+            "ts must be timezone-aware (got naive datetime)"
+        )
+
     power_w: int = raw["power_w"]
 
     return {

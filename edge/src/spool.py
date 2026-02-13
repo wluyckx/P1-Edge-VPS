@@ -114,6 +114,8 @@ class Spool:
             List of sample dicts, each containing ``rowid`` and all
             spool columns. Empty list when the spool has no pending rows.
         """
+        if n < 1:
+            return []
         cursor = self._conn.execute(_PEEK_SQL, {"limit": n})
         return [dict(row) for row in cursor.fetchall()]
 

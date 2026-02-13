@@ -1,0 +1,79 @@
+{
+  "valid_batch": {
+    "samples": [
+      {
+        "device_id": "dev1",
+        "ts": "2026-02-13T10:00:00Z",
+        "power_w": 450,
+        "import_power_w": 450,
+        "energy_import_kwh": 1234.5,
+        "energy_export_kwh": 100.2
+      },
+      {
+        "device_id": "dev1",
+        "ts": "2026-02-13T10:01:00Z",
+        "power_w": 500,
+        "import_power_w": 500,
+        "energy_import_kwh": 1234.6,
+        "energy_export_kwh": 100.2
+      }
+    ]
+  },
+  "valid_batch_optional_fields": {
+    "samples": [
+      {
+        "device_id": "dev1",
+        "ts": "2026-02-13T10:02:00Z",
+        "power_w": 300,
+        "import_power_w": 300
+      }
+    ]
+  },
+  "wrong_device_batch": {
+    "samples": [
+      {
+        "device_id": "other-device",
+        "ts": "2026-02-13T10:00:00Z",
+        "power_w": 450,
+        "import_power_w": 450
+      }
+    ]
+  },
+  "mixed_device_batch": {
+    "samples": [
+      {
+        "device_id": "dev1",
+        "ts": "2026-02-13T10:00:00Z",
+        "power_w": 450,
+        "import_power_w": 450
+      },
+      {
+        "device_id": "other-device",
+        "ts": "2026-02-13T10:01:00Z",
+        "power_w": 500,
+        "import_power_w": 500
+      }
+    ]
+  },
+  "invalid_missing_fields": {
+    "samples": [
+      {
+        "device_id": "dev1",
+        "ts": "2026-02-13T10:00:00Z"
+      }
+    ]
+  },
+  "invalid_wrong_type": {
+    "samples": [
+      {
+        "device_id": "dev1",
+        "ts": "2026-02-13T10:00:00Z",
+        "power_w": "not_a_number",
+        "import_power_w": 450
+      }
+    ]
+  },
+  "invalid_empty_samples": {
+    "not_samples": []
+  }
+}
