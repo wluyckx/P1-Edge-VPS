@@ -4,9 +4,10 @@
   <project>P1-Edge-VPS Energy Telemetry Platform</project>
   <last_updated>2026-02-13</last_updated>
   <total_stories>15</total_stories>
-  <done>9</done>
-  <progress>60%</progress>
+  <done>12</done>
+  <progress>80%</progress>
   <changelog>
+    <entry date="2026-02-13">Wave 4: STORY-010 (realtime) + STORY-011 (capacity tariff) + STORY-012 (historical series) done. Review fixes: explicit DEVICE_ID config, HTTPBearer auto_error=False for 401, eager startup token validation, root Makefile for CI, URL trailing-slash strip. 220 tests, 0 failures.</entry>
     <entry date="2026-02-13">Wave 3: STORY-005 (batch uploader) + STORY-009 (ingest API) done. Review fixes: lazy auth init via get_settings(), poller catch-all exception, normalizer tz-aware enforcement, spool peek guard, token parse warning logs. 168 tests, 0 failures.</entry>
     <entry date="2026-02-13">Wave 2: STORY-002..004 (edge) + STORY-007..008 (VPS) done. Review fixes: standardize VPS imports to src.X, edge conftest future annotations, remove direct port 8000 binding, monkeypatch config tests, fix .env.example asyncpg URL, add requirements-dev.txt. 121 tests, 0 failures.</entry>
     <entry date="2026-02-13">Fix 7 backlog issues: canonical ingest contract (wrapped object), device_id auth matching AC, HTTPS enforcement ACs, sync cross-file drift, trim rolling 12-month from STORY-011, create technicaldesign.md, add contract dependency note to STORY-005</entry>
@@ -546,7 +547,7 @@
 
 <phase id="3" name="API Features" story_file="docs/stories/phase-3-api-features.md">
 
-<story id="STORY-010" status="pending" complexity="M" tdd="required">
+<story id="STORY-010" status="done" complexity="M" tdd="required">
   <title>Realtime metrics endpoint</title>
   <dependencies>STORY-009</dependencies>
   <description>
@@ -585,7 +586,7 @@
   </notes>
 </story>
 
-<story id="STORY-011" status="pending" complexity="L" tdd="required">
+<story id="STORY-011" status="done" complexity="L" tdd="required">
   <title>Capacity tariff calculation (kwartierpiek)</title>
   <dependencies>STORY-009</dependencies>
   <description>
@@ -629,7 +630,7 @@
   </notes>
 </story>
 
-<story id="STORY-012" status="pending" complexity="L" tdd="required">
+<story id="STORY-012" status="done" complexity="L" tdd="required">
   <title>Historical series endpoint</title>
   <dependencies>STORY-009</dependencies>
   <description>
@@ -778,10 +779,10 @@
   <phase_summary>
     <phase id="1" name="Edge Foundation" stories="5" done="5" progress="100%" link="stories/phase-1-edge-foundation.md" />
     <phase id="2" name="VPS Foundation" stories="4" done="4" progress="100%" link="stories/phase-2-vps-foundation.md" />
-    <phase id="3" name="API Features" stories="4" done="0" progress="0%" link="stories/phase-3-api-features.md" />
+    <phase id="3" name="API Features" stories="4" done="3" progress="75%" link="stories/phase-3-api-features.md" />
     <phase id="4" name="Production Readiness" stories="2" done="0" progress="0%" />
   </phase_summary>
-  <total stories="15" done="9" progress="60%" />
+  <total stories="15" done="12" progress="80%" />
 </progress>
 
 <!-- ============================================================ -->

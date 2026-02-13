@@ -2,7 +2,7 @@
 
 **Status**: Not Started
 **Stories**: 4
-**Completed**: 0
+**Completed**: 3
 **Depends On**: Phase 2 (specifically STORY-009 for all stories, STORY-007 for STORY-013)
 
 ---
@@ -20,7 +20,7 @@ This phase is complete when:
 
 ## Stories
 
-<story id="STORY-010" status="pending" complexity="M" tdd="required">
+<story id="STORY-010" status="done" complexity="M" tdd="required">
   <title>Realtime metrics endpoint</title>
   <dependencies>STORY-009</dependencies>
 
@@ -74,7 +74,7 @@ This phase is complete when:
 
 ---
 
-<story id="STORY-011" status="pending" complexity="L" tdd="required">
+<story id="STORY-011" status="done" complexity="L" tdd="required">
   <title>Capacity tariff calculation (kwartierpiek)</title>
   <dependencies>STORY-009</dependencies>
 
@@ -141,7 +141,7 @@ This phase is complete when:
 
 ---
 
-<story id="STORY-012" status="pending" complexity="L" tdd="required">
+<story id="STORY-012" status="done" complexity="L" tdd="required">
   <title>Historical series endpoint</title>
   <dependencies>STORY-009</dependencies>
 
