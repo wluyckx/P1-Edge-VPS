@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+# importlib mode gives each test file a unique module name based on its full
+# path.  This prevents the ImportPathMismatchError that occurs when both
+# edge/tests/conftest.py and vps/tests/conftest.py are collected in a single
+# pytest invocation from the repo root.
+addopts = "--import-mode=importlib"
+# "." for edge imports (from edge.src.xxx), "vps" for VPS imports (from src.xxx)
+pythonpath = [".", "vps"]
