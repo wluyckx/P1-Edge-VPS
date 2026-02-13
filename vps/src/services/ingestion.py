@@ -36,8 +36,12 @@ async def ingest_samples(session: AsyncSession, samples: list[dict]) -> int:
     if not samples:
         return 0
 
-    stmt = insert(P1Sample).values(samples).on_conflict_do_nothing(
-        index_elements=["device_id", "ts"],
+    stmt = (
+        insert(P1Sample)
+        .values(samples)
+        .on_conflict_do_nothing(
+            index_elements=["device_id", "ts"],
+        )
     )
     result = await session.execute(stmt)
     await session.commit()

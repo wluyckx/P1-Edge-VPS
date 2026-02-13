@@ -55,7 +55,9 @@ def parse_month_range(month: str) -> tuple[datetime, datetime]:
 
 
 async def get_monthly_peaks(
-    session: AsyncSession, device_id: str, month: str,
+    session: AsyncSession,
+    device_id: str,
+    month: str,
 ) -> dict:
     """Query 15-minute average power peaks for a month.
 
@@ -86,7 +88,8 @@ async def get_monthly_peaks(
     )
 
     result = await session.execute(
-        query, {"device_id": device_id, "start": start, "end": end},
+        query,
+        {"device_id": device_id, "start": start, "end": end},
     )
     rows = result.all()
 

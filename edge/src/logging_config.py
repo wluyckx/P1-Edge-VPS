@@ -38,9 +38,7 @@ class JSONFormatter(logging.Formatter):
             A single-line JSON string.
         """
         log_entry = {
-            "timestamp": datetime.fromtimestamp(
-                record.created, tz=UTC
-            ).isoformat(),
+            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

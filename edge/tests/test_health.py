@@ -23,6 +23,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from edge.src.health import (
     get_health_status,
+    record_p1_connected,
     record_upload_failure,
     record_upload_success,
     reset,
@@ -53,10 +54,46 @@ def _mock_spool(count: int = 5) -> MagicMock:
 def _mock_uploader(backoff: float = 1.0) -> MagicMock:
     """Return a mock Uploader with a configurable current_backoff."""
     uploader = MagicMock()
-    type(uploader).current_backoff = property(
-        lambda self: backoff
-    )
+    type(uploader).current_backoff = property(lambda self: backoff)
     return uploader
+
+
+# ===========================================================
+# AC2: get_health_status reports P1 connectivity
+# ===========================================================
+
+
+class TestP1Connectivity:
+    """Health status includes P1 meter connectivity."""
+
+    def test_p1_connected_initially_none(self):
+        """AC2: Before any poll, p1_connected is None."""
+        spool = _mock_spool()
+        uploader = _mock_uploader()
+
+        result = get_health_status(spool, uploader)
+
+        assert result["p1_connected"] is None
+
+    def test_p1_connected_true(self):
+        """AC2: After successful poll, p1_connected is True."""
+        record_p1_connected(True)
+        spool = _mock_spool()
+        uploader = _mock_uploader()
+
+        result = get_health_status(spool, uploader)
+
+        assert result["p1_connected"] is True
+
+    def test_p1_connected_false(self):
+        """AC2: After failed poll, p1_connected is False."""
+        record_p1_connected(False)
+        spool = _mock_spool()
+        uploader = _mock_uploader()
+
+        result = get_health_status(spool, uploader)
+
+        assert result["p1_connected"] is False
 
 
 # ===========================================================

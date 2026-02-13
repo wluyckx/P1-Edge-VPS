@@ -81,7 +81,9 @@ async def _cache_get(device_id: str) -> dict | None:
             await client.aclose()
     except Exception:
         logger.warning(
-            "Redis cache read failed for device %s", device_id, exc_info=True,
+            "Redis cache read failed for device %s",
+            device_id,
+            exc_info=True,
         )
     return None
 
@@ -108,7 +110,9 @@ async def _cache_set(device_id: str, data: dict) -> None:
             await client.aclose()
     except Exception:
         logger.warning(
-            "Redis cache write failed for device %s", device_id, exc_info=True,
+            "Redis cache write failed for device %s",
+            device_id,
+            exc_info=True,
         )
 
 

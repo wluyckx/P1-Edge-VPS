@@ -15,6 +15,7 @@ Handles SIGTERM and SIGINT for graceful shutdown inside Docker:
 
 CHANGELOG:
 - 2026-02-13: Initial creation (STORY-005)
+- 2026-02-13: Wire health file writing into poll/upload loops (quality fix)
 - 2026-02-13: Structured JSON logging, graceful shutdown, signal
               handling (STORY-015)
 
@@ -29,6 +30,12 @@ from datetime import UTC, datetime
 from types import FrameType
 
 from edge.src.config import EdgeSettings
+from edge.src.health import (
+    record_p1_connected,
+    record_upload_failure,
+    record_upload_success,
+    write_health_file,
+)
 from edge.src.logging_config import setup_logging
 from edge.src.normalizer import normalize
 from edge.src.poller import poll_measurement
@@ -54,6 +61,7 @@ def _poll_loop(
     4. Sleep for ``poll_interval_s`` (interruptible).
 
     Any single-poll failure is logged and skipped (the loop continues).
+    Records P1 connectivity status for the health check.
     """
     device_id = settings.device_id
     while not shutdown_event.is_set():
@@ -62,6 +70,7 @@ def _poll_loop(
                 host=settings.hw_p1_host,
                 token=settings.hw_p1_token,
             )
+            record_p1_connected(raw is not None)
             if raw is not None:
                 ts = datetime.now(tz=UTC)
                 sample = normalize(raw, device_id, ts)
@@ -71,6 +80,7 @@ def _poll_loop(
                     spool.count(),
                 )
         except Exception:
+            record_p1_connected(False)
             logger.exception("Unexpected error in poll loop")
 
         shutdown_event.wait(timeout=settings.poll_interval_s)
@@ -78,14 +88,16 @@ def _poll_loop(
 
 def _upload_loop(
     settings: EdgeSettings,
+    spool: Spool,
     uploader: Uploader,
 ) -> None:
     """Continuously upload batches from the spool to the VPS.
 
     Runs until ``shutdown_event`` is set. On each iteration:
     1. Attempt ``upload_batch()``.
-    2. On failure, sleep for the current backoff duration.
-    3. On success or empty spool, sleep for ``upload_interval_s``.
+    2. Record upload result and write health file.
+    3. On failure, sleep for the current backoff duration.
+    4. On success or empty spool, sleep for ``upload_interval_s``.
     """
     while not shutdown_event.is_set():
         try:
@@ -95,8 +107,10 @@ def _upload_loop(
             success = False
 
         if success:
+            record_upload_success()
             delay = settings.upload_interval_s
         else:
+            record_upload_failure()
             # Use the larger of upload_interval and current backoff,
             # so we never upload faster than the configured interval.
             delay = max(
@@ -104,6 +118,7 @@ def _upload_loop(
                 uploader.current_backoff,
             )
 
+        write_health_file(spool, uploader)
         shutdown_event.wait(timeout=delay)
 
 
@@ -162,8 +177,7 @@ def main() -> None:
     signal.signal(signal.SIGINT, _signal_handler)
 
     logger.info(
-        "Edge daemon starting -- poll every %ds, upload every %ds, "
-        "batch size %d",
+        "Edge daemon starting -- poll every %ds, upload every %ds, batch size %d",
         settings.poll_interval_s,
         settings.upload_interval_s,
         settings.batch_size,
@@ -177,7 +191,7 @@ def main() -> None:
     )
     upload_thread = threading.Thread(
         target=_upload_loop,
-        args=(settings, uploader),
+        args=(settings, spool, uploader),
         daemon=True,
         name="upload-thread",
     )

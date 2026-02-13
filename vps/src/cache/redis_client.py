@@ -52,5 +52,7 @@ async def invalidate_device_cache(device_id: str) -> None:
             await client.aclose()
     except Exception:
         logger.warning(
-            "Failed to invalidate cache for device %s", device_id, exc_info=True,
+            "Failed to invalidate cache for device %s",
+            device_id,
+            exc_info=True,
         )

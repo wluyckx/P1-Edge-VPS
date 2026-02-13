@@ -41,10 +41,14 @@ class P1Sample(Base):
     __tablename__ = "p1_samples"
 
     device_id: Mapped[str] = mapped_column(
-        Text, primary_key=True, nullable=False,
+        Text,
+        primary_key=True,
+        nullable=False,
     )
     ts: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), primary_key=True, nullable=False,
+        DateTime(timezone=True),
+        primary_key=True,
+        nullable=False,
     )
     power_w: Mapped[int] = mapped_column(Integer, nullable=False)
     import_power_w: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -53,7 +57,4 @@ class P1Sample(Base):
 
     def __repr__(self) -> str:
         """Return string representation of the P1Sample."""
-        return (
-            f"P1Sample(device_id={self.device_id!r}, ts={self.ts!r}, "
-            f"power_w={self.power_w!r})"
-        )
+        return f"P1Sample(device_id={self.device_id!r}, ts={self.ts!r}, power_w={self.power_w!r})"

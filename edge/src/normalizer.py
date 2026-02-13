@@ -53,9 +53,7 @@ def normalize(raw: dict, device_id: str, ts: datetime) -> dict:
     _validate_required_fields(raw)
 
     if ts.tzinfo is None:
-        raise ValueError(
-            "ts must be timezone-aware (got naive datetime)"
-        )
+        raise ValueError("ts must be timezone-aware (got naive datetime)")
 
     power_w: int = raw["power_w"]
 
@@ -82,6 +80,5 @@ def _validate_required_fields(raw: dict) -> None:
     if missing:
         sorted_missing = sorted(missing)
         raise ValueError(
-            f"Raw measurement is missing required field(s): "
-            f"{', '.join(sorted_missing)}"
+            f"Raw measurement is missing required field(s): {', '.join(sorted_missing)}"
         )

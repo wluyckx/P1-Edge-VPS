@@ -79,7 +79,12 @@ def _get_date_range(
 
     if range_type == "current_year":
         start = now.replace(
-            month=1, day=1, hour=0, minute=0, second=0, microsecond=0,
+            month=1,
+            day=1,
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
         )
         end = start.replace(year=now.year + 1)
         return start, end
@@ -88,7 +93,9 @@ def _get_date_range(
 
 
 async def get_aggregated_series(
-    session: AsyncSession, device_id: str, frame: str,
+    session: AsyncSession,
+    device_id: str,
+    frame: str,
 ) -> list[dict]:
     """Query aggregated series for a device and time frame.
 

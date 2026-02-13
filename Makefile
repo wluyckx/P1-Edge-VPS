@@ -1,4 +1,4 @@
-.PHONY: test test-edge test-vps lint lint-edge lint-vps check
+.PHONY: test test-edge test-vps lint format check
 
 PYTHON := .venv/bin/python
 
@@ -12,14 +12,13 @@ test-edge:
 test-vps:
 	$(PYTHON) -m pytest vps/tests/ -q
 
-# Run lint checks
-lint: lint-edge lint-vps
+# Lint (zero warnings required)
+lint:
+	ruff check edge/src/ vps/src/
 
-lint-edge:
-	ruff check edge/src/
+# Format check (DoD gate)
+format:
+	ruff format --check edge/src/ vps/src/
 
-lint-vps:
-	ruff check vps/src/
-
-# Combined check (lint + test)
-check: lint test
+# Combined check (lint + format + test)
+check: lint format test

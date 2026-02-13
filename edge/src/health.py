@@ -8,6 +8,7 @@ the current operational state of the edge daemon. Also provides
 JSON file on disk.
 
 CHANGELOG:
+- 2026-02-13: Add p1_connected field, wire into daemon loops (quality fix)
 - 2026-02-13: Initial creation (STORY-014)
 
 TODO:
@@ -25,9 +26,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Module-level state tracking for upload results.
+# Module-level state tracking for upload results and P1 connectivity.
 _last_upload_ok: bool | None = None
 _last_upload_ts: float | None = None
+_p1_connected: bool | None = None
 
 # Default health file path (inside the Docker volume).
 HEALTH_FILE_PATH = "/data/health.json"
@@ -45,6 +47,12 @@ def record_upload_failure() -> None:
     global _last_upload_ok, _last_upload_ts  # noqa: PLW0603
     _last_upload_ok = False
     _last_upload_ts = time.monotonic()
+
+
+def record_p1_connected(connected: bool) -> None:
+    """Record the latest P1 meter connectivity status."""
+    global _p1_connected  # noqa: PLW0603
+    _p1_connected = connected
 
 
 def get_health_status(
@@ -83,6 +91,7 @@ def get_health_status(
         elapsed = round(time.monotonic() - _last_upload_ts, 1)
 
     return {
+        "p1_connected": _p1_connected,
         "spool_depth": spool_depth,
         "last_upload_success": _last_upload_ok,
         "last_upload_elapsed_s": elapsed,
@@ -108,9 +117,7 @@ def write_health_file(
     """
     try:
         status = get_health_status(spool, uploader)
-        Path(path).write_text(
-            json.dumps(status), encoding="utf-8"
-        )
+        Path(path).write_text(json.dumps(status), encoding="utf-8")
     except Exception:
         logger.warning(
             "Health check: failed to write health file",
@@ -120,6 +127,7 @@ def write_health_file(
 
 def reset() -> None:
     """Reset module-level state (for testing only)."""
-    global _last_upload_ok, _last_upload_ts  # noqa: PLW0603
+    global _last_upload_ok, _last_upload_ts, _p1_connected  # noqa: PLW0603
     _last_upload_ok = None
     _last_upload_ts = None
+    _p1_connected = None

@@ -58,8 +58,7 @@ class Uploader:
     ) -> None:
         if not ingest_url.startswith("https://"):
             raise ValueError(
-                "ingest_url must use HTTPS "
-                f"(got: '{ingest_url}'). See HC-003."
+                f"ingest_url must use HTTPS (got: '{ingest_url}'). See HC-003."
             )
 
         self._spool = spool
@@ -100,8 +99,7 @@ class Uploader:
 
         rowids = [r["rowid"] for r in rows]
         samples = [
-            {k: v for k, v in row.items() if k not in _STRIP_KEYS}
-            for row in rows
+            {k: v for k, v in row.items() if k not in _STRIP_KEYS} for row in rows
         ]
         payload = {"samples": samples}
 
@@ -109,9 +107,7 @@ class Uploader:
         headers = {"Authorization": f"Bearer {self._device_token}"}
 
         try:
-            response = self._client.post(
-                url, json=payload, headers=headers
-            )
+            response = self._client.post(url, json=payload, headers=headers)
             response.raise_for_status()
         except (httpx.HTTPStatusError, httpx.TransportError) as exc:
             self._attempt += 1
@@ -126,9 +122,7 @@ class Uploader:
         # Success — ack rows and reset backoff.
         self._spool.ack(rowids)
         self._attempt = 0
-        logger.info(
-            "Uploaded %d samples, acked rowids %s", len(samples), rowids
-        )
+        logger.info("Uploaded %d samples, acked rowids %s", len(samples), rowids)
         return True
 
     @property

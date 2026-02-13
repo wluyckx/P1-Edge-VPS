@@ -95,10 +95,7 @@ class TestSetupLogging:
         setup_logging()
         root = logging.getLogger()
         assert len(root.handlers) >= 1
-        has_json = any(
-            isinstance(h.formatter, JSONFormatter)
-            for h in root.handlers
-        )
+        has_json = any(isinstance(h.formatter, JSONFormatter) for h in root.handlers)
         assert has_json
 
     def test_setup_logging_sets_level(self) -> None:
@@ -204,9 +201,7 @@ class TestShutdownEvent:
         settings.device_id = "test"
         spool = MagicMock()
 
-        with patch(
-            "edge.src.main.poll_measurement", return_value=None
-        ):
+        with patch("edge.src.main.poll_measurement", return_value=None):
             # Set shutdown immediately.
             shutdown_event.set()
             thread = threading.Thread(
@@ -228,6 +223,8 @@ class TestShutdownEvent:
 
         settings = MagicMock()
         settings.upload_interval_s = 0.01
+        spool = MagicMock()
+        spool.count.return_value = 0
         uploader = MagicMock()
         uploader.upload_batch.return_value = False
         uploader.current_backoff = 0.01
@@ -235,7 +232,7 @@ class TestShutdownEvent:
         shutdown_event.set()
         thread = threading.Thread(
             target=_upload_loop,
-            args=(settings, uploader),
+            args=(settings, spool, uploader),
             daemon=True,
         )
         thread.start()

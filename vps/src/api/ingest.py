@@ -124,7 +124,9 @@ async def ingest(
         await invalidate_device_cache(device_id)
     except Exception:
         logger.warning(
-            "Cache invalidation failed for device %s", device_id, exc_info=True,
+            "Cache invalidation failed for device %s",
+            device_id,
+            exc_info=True,
         )
 
     return IngestResponse(inserted=inserted)
