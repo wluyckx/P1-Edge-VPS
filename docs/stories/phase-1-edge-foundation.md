@@ -2,7 +2,7 @@
 
 **Status**: Not Started
 **Stories**: 5
-**Completed**: 0
+**Completed**: 1
 **Depends On**: None
 
 ---
@@ -20,7 +20,7 @@ This phase is complete when:
 
 ## Stories
 
-<story id="STORY-001" status="pending" complexity="S" tdd="recommended">
+<story id="STORY-001" status="done" complexity="S" tdd="recommended">
   <title>Edge project scaffolding</title>
   <dependencies>None</dependencies>
 

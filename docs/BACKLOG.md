@@ -4,8 +4,8 @@
   <project>P1-Edge-VPS Energy Telemetry Platform</project>
   <last_updated>2026-02-13</last_updated>
   <total_stories>15</total_stories>
-  <done>0</done>
-  <progress>0%</progress>
+  <done>2</done>
+  <progress>13%</progress>
   <changelog>
     <entry date="2026-02-13">Fix 7 backlog issues: canonical ingest contract (wrapped object), device_id auth matching AC, HTTPS enforcement ACs, sync cross-file drift, trim rolling 12-month from STORY-011, create technicaldesign.md, add contract dependency note to STORY-005</entry>
     <entry date="2026-02-13">Initial backlog creation (15 stories across 3 phases)</entry>
@@ -137,7 +137,7 @@
 
 <phase id="1" name="Edge Foundation" story_file="docs/stories/phase-1-edge-foundation.md">
 
-<story id="STORY-001" status="pending" complexity="S" tdd="recommended">
+<story id="STORY-001" status="done" complexity="S" tdd="recommended">
   <title>Edge project scaffolding</title>
   <dependencies>None</dependencies>
   <description>
@@ -358,7 +358,7 @@
 
 <phase id="2" name="VPS Foundation" story_file="docs/stories/phase-2-vps-foundation.md">
 
-<story id="STORY-006" status="pending" complexity="S" tdd="recommended">
+<story id="STORY-006" status="done" complexity="S" tdd="recommended">
   <title>VPS project scaffolding</title>
   <dependencies>None</dependencies>
   <description>
@@ -774,12 +774,12 @@
 
 <progress>
   <phase_summary>
-    <phase id="1" name="Edge Foundation" stories="5" done="0" progress="0%" link="stories/phase-1-edge-foundation.md" />
-    <phase id="2" name="VPS Foundation" stories="4" done="0" progress="0%" link="stories/phase-2-vps-foundation.md" />
+    <phase id="1" name="Edge Foundation" stories="5" done="1" progress="20%" link="stories/phase-1-edge-foundation.md" />
+    <phase id="2" name="VPS Foundation" stories="4" done="1" progress="25%" link="stories/phase-2-vps-foundation.md" />
     <phase id="3" name="API Features" stories="4" done="0" progress="0%" link="stories/phase-3-api-features.md" />
     <phase id="4" name="Production Readiness" stories="2" done="0" progress="0%" />
   </phase_summary>
-  <total stories="15" done="0" progress="0%" />
+  <total stories="15" done="2" progress="13%" />
 </progress>
 
 <!-- ============================================================ -->

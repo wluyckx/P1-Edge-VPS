@@ -2,7 +2,7 @@
 
 **Status**: Not Started
 **Stories**: 4
-**Completed**: 0
+**Completed**: 1
 **Depends On**: None (can be developed in parallel with Phase 1)
 
 ---
@@ -20,7 +20,7 @@ This phase is complete when:
 
 ## Stories
 
-<story id="STORY-006" status="pending" complexity="S" tdd="recommended">
+<story id="STORY-006" status="done" complexity="S" tdd="recommended">
   <title>VPS project scaffolding</title>
   <dependencies>None</dependencies>
 
