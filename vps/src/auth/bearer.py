@@ -101,7 +101,7 @@ class BearerAuth:
             token_map: Mapping of token -> device_id.
         """
         self.token_map = token_map
-        self.scheme = HTTPBearer()
+        self.scheme = HTTPBearer(auto_error=False)
 
     async def verify(
         self,

@@ -63,7 +63,7 @@ class Uploader:
             )
 
         self._spool = spool
-        self._ingest_url = ingest_url
+        self._ingest_url = ingest_url.rstrip("/")
         self._device_token = device_token
         self._batch_size = batch_size
         self._max_backoff = max_backoff

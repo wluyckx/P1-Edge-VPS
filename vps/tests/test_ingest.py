@@ -264,8 +264,7 @@ class TestIngestAuth:
             "/v1/ingest",
             json=sample_data["valid_batch"],
         )
-        # FastAPI HTTPBearer returns 403 for missing header by default
-        assert response.status_code in (401, 403)
+        assert response.status_code == 401
 
     def test_invalid_token_returns_401(
         self, unauth_client: TestClient, sample_data: dict,

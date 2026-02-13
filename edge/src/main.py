@@ -51,7 +51,7 @@ def _poll_loop(
 
     Any single-poll failure is logged and skipped (the loop continues).
     """
-    device_id = settings.hw_p1_host  # use host as device identifier
+    device_id = settings.device_id
     while True:
         try:
             raw = poll_measurement(

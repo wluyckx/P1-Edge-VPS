@@ -589,3 +589,28 @@ class TestBackoffReset:
             spool.peek.return_value = []
             uploader.upload_batch()
             assert uploader.current_backoff == 2.0
+
+
+# ===========================================================================
+# URL normalisation: trailing slash stripped
+# ===========================================================================
+
+
+class TestUrlNormalisation:
+    """Trailing slash on ingest URL is stripped to avoid //v1/ingest."""
+
+    def test_trailing_slash_stripped(self) -> None:
+        """Trailing slash on ingest URL does not produce double-slash."""
+        spool = MagicMock()
+        uploader = _make_uploader(
+            spool, ingest_url="https://vps.example.com/",
+        )
+        assert uploader._ingest_url == "https://vps.example.com"
+
+    def test_no_trailing_slash_unchanged(self) -> None:
+        """URL without trailing slash is unchanged."""
+        spool = MagicMock()
+        uploader = _make_uploader(
+            spool, ingest_url="https://vps.example.com",
+        )
+        assert uploader._ingest_url == "https://vps.example.com"

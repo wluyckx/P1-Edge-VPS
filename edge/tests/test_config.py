@@ -157,6 +157,35 @@ class TestVpsIngestUrlHttpsValidation:
         assert "https" in str(exc_info.value).lower()
 
 
+class TestDeviceIdConfig:
+    """DEVICE_ID defaults to hw_p1_host but can be overridden."""
+
+    def test_device_id_defaults_to_hw_p1_host(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When DEVICE_ID is not set, it defaults to HW_P1_HOST."""
+        monkeypatch.setenv("HW_P1_HOST", "192.168.1.5")
+        monkeypatch.setenv("HW_P1_TOKEN", "token")
+        monkeypatch.setenv("VPS_INGEST_URL", "https://example.com")
+        monkeypatch.setenv("VPS_DEVICE_TOKEN", "device-token")
+
+        settings = EdgeSettings()
+        assert settings.device_id == "192.168.1.5"
+
+    def test_device_id_explicit_overrides_host(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Explicit DEVICE_ID overrides the hw_p1_host default."""
+        monkeypatch.setenv("HW_P1_HOST", "192.168.1.5")
+        monkeypatch.setenv("HW_P1_TOKEN", "token")
+        monkeypatch.setenv("VPS_INGEST_URL", "https://example.com")
+        monkeypatch.setenv("VPS_DEVICE_TOKEN", "device-token")
+        monkeypatch.setenv("DEVICE_ID", "device-1")
+
+        settings = EdgeSettings()
+        assert settings.device_id == "device-1"
+
+
 class TestNumericConstraints:
     """Numeric configuration values must be within valid ranges."""
 

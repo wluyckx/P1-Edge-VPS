@@ -51,8 +51,12 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 _bearer_auth: BearerAuth | None = None
 
 
-def _get_bearer_auth() -> BearerAuth:
-    """Lazily build BearerAuth from settings on first use.
+def init_bearer_auth() -> BearerAuth:
+    """Build BearerAuth from settings.
+
+    Intended to be called at startup (via lifespan) so that token
+    configuration is validated eagerly. Also called lazily on first
+    request as a safety net.
 
     Uses get_settings() to load DEVICE_TOKENS, which respects .env files
     and Pydantic BaseSettings loading. Cached after first call.
@@ -79,7 +83,7 @@ async def get_current_device_id(request: Request) -> str:
     Returns:
         str: The device_id associated with the valid Bearer token.
     """
-    auth = _get_bearer_auth()
+    auth = init_bearer_auth()
     return await auth.verify(request)
 
 

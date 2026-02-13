@@ -170,8 +170,7 @@ class TestBearerAuthVerify:
             "/protected", headers={"Authorization": "Bearer "}
         )
 
-        # FastAPI HTTPBearer may reject empty credentials; either 401 or 403 is acceptable
-        assert response.status_code in (401, 403)
+        assert response.status_code == 401
 
 
 # ---------------------------------------------------------------------------

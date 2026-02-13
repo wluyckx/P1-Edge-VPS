@@ -12,7 +12,7 @@ TODO:
 - None
 """
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -27,6 +27,9 @@ class EdgeSettings(BaseSettings):
         hw_p1_token: HomeWizard Local API v2 bearer token.
         vps_ingest_url: VPS base URL for ingestion (must be HTTPS).
         vps_device_token: Per-device bearer token for VPS auth.
+        device_id: Device identifier sent in samples. Must match the
+            device_id mapped to vps_device_token on the VPS side.
+            Defaults to hw_p1_host if not set.
         poll_interval_s: Seconds between P1 polls.
         batch_size: Max samples per upload batch.
         upload_interval_s: Seconds between upload attempts.
@@ -37,10 +40,18 @@ class EdgeSettings(BaseSettings):
     hw_p1_token: str
     vps_ingest_url: str
     vps_device_token: str
+    device_id: str = ""
     poll_interval_s: int = 2
     batch_size: int = 30
     upload_interval_s: int = 10
     spool_path: str = "/data/spool.db"
+
+    @model_validator(mode="after")
+    def _default_device_id(self) -> "EdgeSettings":
+        """Default device_id to hw_p1_host when not explicitly set."""
+        if not self.device_id:
+            self.device_id = self.hw_p1_host
+        return self
 
     @field_validator("vps_ingest_url")
     @classmethod
