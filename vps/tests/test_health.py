@@ -8,10 +8,8 @@ TODO:
 - None
 """
 
-import os
-
 from fastapi.testclient import TestClient
-from vps.src.main import app
+from src.main import app
 
 
 def test_health_returns_200():
@@ -30,14 +28,14 @@ def test_health_returns_json_with_status():
     assert data["status"] == "ok"
 
 
-def test_config_loads_from_env():
+def test_config_loads_from_env(monkeypatch):
     """Settings loads values from environment variables."""
-    os.environ["DATABASE_URL"] = "postgresql+asyncpg://user:pass@localhost/testdb"
-    os.environ["REDIS_URL"] = "redis://localhost:6379/0"
-    os.environ["DEVICE_TOKENS"] = "token1:device-1"
-    os.environ["CACHE_TTL_S"] = "10"
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/testdb")
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("DEVICE_TOKENS", "token1:device-1")
+    monkeypatch.setenv("CACHE_TTL_S", "10")
 
-    from vps.src.config import Settings
+    from src.config import Settings
 
     settings = Settings()
     assert settings.DATABASE_URL == "postgresql+asyncpg://user:pass@localhost/testdb"
@@ -46,14 +44,14 @@ def test_config_loads_from_env():
     assert settings.CACHE_TTL_S == 10
 
 
-def test_config_default_cache_ttl():
+def test_config_default_cache_ttl(monkeypatch):
     """CACHE_TTL_S defaults to 5 when not set."""
-    os.environ["DATABASE_URL"] = "postgresql+asyncpg://user:pass@localhost/testdb"
-    os.environ["REDIS_URL"] = "redis://localhost:6379/0"
-    os.environ["DEVICE_TOKENS"] = "token1:device-1"
-    os.environ.pop("CACHE_TTL_S", None)
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/testdb")
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    monkeypatch.setenv("DEVICE_TOKENS", "token1:device-1")
+    monkeypatch.delenv("CACHE_TTL_S", raising=False)
 
-    from vps.src.config import Settings
+    from src.config import Settings
 
     settings = Settings()
     assert settings.CACHE_TTL_S == 5

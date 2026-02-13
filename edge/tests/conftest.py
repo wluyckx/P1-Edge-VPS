@@ -8,6 +8,8 @@ TODO:
 - None
 """
 
+from __future__ import annotations
+
 import pytest
 
 # All EdgeSettings environment variable names, used for cleanup.

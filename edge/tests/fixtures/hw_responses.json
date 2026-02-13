@@ -1,0 +1,29 @@
+{
+  "success_measurement": {
+    "power_w": 450,
+    "energy_import_kwh": 1234.567,
+    "energy_export_kwh": 89.012,
+    "voltage_l1_v": 232.1,
+    "current_l1_a": 1.94,
+    "power_l1_w": 450,
+    "gas_m3": 567.89
+  },
+  "zero_power_measurement": {
+    "power_w": 0,
+    "energy_import_kwh": 1234.567,
+    "energy_export_kwh": 89.012,
+    "voltage_l1_v": 230.0,
+    "current_l1_a": 0.0,
+    "power_l1_w": 0,
+    "gas_m3": 567.89
+  },
+  "negative_power_measurement": {
+    "power_w": -200,
+    "energy_import_kwh": 1234.567,
+    "energy_export_kwh": 90.500,
+    "voltage_l1_v": 231.5,
+    "current_l1_a": 0.86,
+    "power_l1_w": -200,
+    "gas_m3": 567.89
+  }
+}

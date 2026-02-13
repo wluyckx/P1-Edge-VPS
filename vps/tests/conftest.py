@@ -14,7 +14,7 @@ TODO:
 
 import pytest
 from fastapi.testclient import TestClient
-from vps.src.main import app
+from src.main import app
 
 
 @pytest.fixture()
