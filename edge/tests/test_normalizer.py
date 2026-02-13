@@ -24,6 +24,7 @@ from edge.src.normalizer import normalize
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def valid_raw() -> dict:
     """A valid raw HomeWizard measurement dict with all fields present."""
@@ -49,6 +50,7 @@ def sample_ts() -> datetime:
 # ---------------------------------------------------------------------------
 # Test: valid input -> correct normalized output
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeValidInput:
     """Valid raw input produces a correctly shaped and valued normalized dict."""
@@ -137,6 +139,7 @@ class TestNormalizeValidInput:
 # Test: import_power_w clamping logic (AC3)
 # ---------------------------------------------------------------------------
 
+
 class TestImportPowerClamping:
     """import_power_w = max(power_w, 0): never negative."""
 
@@ -200,6 +203,7 @@ class TestImportPowerClamping:
 # ---------------------------------------------------------------------------
 # Test: missing required fields -> ValueError (AC4)
 # ---------------------------------------------------------------------------
+
 
 class TestMissingRequiredFieldsRaiseValueError:
     """Missing required fields in raw input must raise ValueError (AC4)."""
@@ -267,6 +271,7 @@ class TestMissingRequiredFieldsRaiseValueError:
 # Test: injectable timestamp (AC5)
 # ---------------------------------------------------------------------------
 
+
 class TestInjectableTimestamp:
     """The ts parameter controls the output timestamp (AC5)."""
 
@@ -316,6 +321,7 @@ class TestInjectableTimestamp:
 # ---------------------------------------------------------------------------
 # Test: extra fields in raw input are ignored
 # ---------------------------------------------------------------------------
+
 
 class TestExtraFieldsIgnored:
     """Extra fields in raw input are silently ignored."""

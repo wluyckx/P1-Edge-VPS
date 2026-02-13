@@ -20,7 +20,6 @@ from fastapi.testclient import TestClient
 from src.db.session import get_async_session
 from src.main import app
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -80,6 +79,7 @@ def client(mock_db_session: AsyncMock) -> TestClient:
     Returns:
         TestClient: Configured test client with dependency overrides.
     """
+
     async def override_get_session():
         yield mock_db_session
 
@@ -138,7 +138,9 @@ class TestCapacityNoData:
     """Tests for months with no data (AC7)."""
 
     def test_no_data_returns_200_with_empty_peaks(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC7: No data returns 200 with peaks=[], null peak fields."""
         result = MagicMock()
@@ -165,7 +167,9 @@ class TestCapacityWithData:
     """Tests for capacity calculation with known data."""
 
     def test_known_data_returns_correct_peaks(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC2/AC3: Known data returns correct peaks list."""
         rows = [
@@ -187,7 +191,9 @@ class TestCapacityWithData:
         assert body["peaks"][2]["avg_power_w"] == 800
 
     def test_monthly_peak_is_maximum(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC4: monthly_peak_w is the MAX of all 15-min averages."""
         rows = [
@@ -205,7 +211,9 @@ class TestCapacityWithData:
         assert body["monthly_peak_w"] == 1200
 
     def test_monthly_peak_ts_matches_peak_bucket(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC5: monthly_peak_ts matches the bucket of the peak window."""
         peak_ts = datetime(2026, 2, 1, 10, 15, tzinfo=timezone.utc)
@@ -224,7 +232,9 @@ class TestCapacityWithData:
         assert body["monthly_peak_ts"] == "2026-02-01T10:15:00+00:00"
 
     def test_single_sample_peak_equals_that_average(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """Single sample in one window: peak equals that single average."""
         ts = datetime(2026, 2, 15, 14, 0, tzinfo=timezone.utc)
@@ -241,7 +251,9 @@ class TestCapacityWithData:
         assert len(body["peaks"]) == 1
 
     def test_response_contains_all_required_fields(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC2: Response has month, device_id, peaks, monthly_peak_w, monthly_peak_ts."""
         rows = [
@@ -261,7 +273,9 @@ class TestCapacityWithData:
         assert "monthly_peak_ts" in body
 
     def test_peaks_bucket_is_iso_string(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC2: Each peak bucket is an ISO 8601 formatted string."""
         ts = datetime(2026, 2, 1, 10, 0, tzinfo=timezone.utc)

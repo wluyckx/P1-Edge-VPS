@@ -21,7 +21,6 @@ from fastapi.testclient import TestClient
 from src.db.session import get_async_session
 from src.main import app
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -118,6 +117,7 @@ def client(mock_db_session: AsyncMock) -> TestClient:
     Returns:
         TestClient: Configured test client with dependency overrides.
     """
+
     async def override_get_session():
         yield mock_db_session
 
@@ -138,6 +138,7 @@ def empty_client(empty_db_session: AsyncMock) -> TestClient:
     Returns:
         TestClient: Configured test client with dependency overrides.
     """
+
     async def override_get_session():
         yield empty_db_session
 
@@ -158,10 +159,13 @@ class TestSeriesInvalidFrame:
 
     def test_invalid_frame_returns_400(self, client: TestClient) -> None:
         """AC7: Unknown frame value returns 400 Bad Request."""
-        response = client.get("/v1/series", params={
-            "device_id": "dev1",
-            "frame": "invalid",
-        })
+        response = client.get(
+            "/v1/series",
+            params={
+                "device_id": "dev1",
+                "frame": "invalid",
+            },
+        )
         assert response.status_code == 400
         assert "Invalid frame" in response.json()["detail"]
 
@@ -185,13 +189,17 @@ class TestSeriesFrameDay:
     """Tests for frame=day aggregation using p1_hourly view."""
 
     def test_frame_day_returns_200_with_series(
-        self, client: TestClient,
+        self,
+        client: TestClient,
     ) -> None:
         """AC2: frame=day returns 200 with aggregated series data."""
-        response = client.get("/v1/series", params={
-            "device_id": "dev1",
-            "frame": "day",
-        })
+        response = client.get(
+            "/v1/series",
+            params={
+                "device_id": "dev1",
+                "frame": "day",
+            },
+        )
         assert response.status_code == 200
         body = response.json()
         assert "series" in body
@@ -199,13 +207,17 @@ class TestSeriesFrameDay:
         assert len(body["series"]) == 2
 
     def test_frame_day_bucket_has_all_required_fields(
-        self, client: TestClient,
+        self,
+        client: TestClient,
     ) -> None:
         """AC6: Each bucket entry has all required fields."""
-        response = client.get("/v1/series", params={
-            "device_id": "dev1",
-            "frame": "day",
-        })
+        response = client.get(
+            "/v1/series",
+            params={
+                "device_id": "dev1",
+                "frame": "day",
+            },
+        )
         body = response.json()
         entry = body["series"][0]
         assert "bucket" in entry
@@ -216,10 +228,13 @@ class TestSeriesFrameDay:
 
     def test_frame_day_field_types(self, client: TestClient) -> None:
         """AC6: Bucket fields have correct types."""
-        response = client.get("/v1/series", params={
-            "device_id": "dev1",
-            "frame": "day",
-        })
+        response = client.get(
+            "/v1/series",
+            params={
+                "device_id": "dev1",
+                "frame": "day",
+            },
+        )
         entry = response.json()["series"][0]
         assert isinstance(entry["bucket"], str)
         assert isinstance(entry["avg_power_w"], int)
@@ -237,13 +252,17 @@ class TestSeriesFrameMonth:
     """Tests for frame=month aggregation using p1_daily view."""
 
     def test_frame_month_returns_200_with_series(
-        self, client: TestClient,
+        self,
+        client: TestClient,
     ) -> None:
         """AC3: frame=month returns 200 with aggregated series data."""
-        response = client.get("/v1/series", params={
-            "device_id": "dev1",
-            "frame": "month",
-        })
+        response = client.get(
+            "/v1/series",
+            params={
+                "device_id": "dev1",
+                "frame": "month",
+            },
+        )
         assert response.status_code == 200
         body = response.json()
         assert "series" in body
@@ -260,13 +279,17 @@ class TestSeriesFrameYear:
     """Tests for frame=year aggregation using p1_monthly view."""
 
     def test_frame_year_returns_200_with_series(
-        self, client: TestClient,
+        self,
+        client: TestClient,
     ) -> None:
         """AC4: frame=year returns 200 with aggregated series data."""
-        response = client.get("/v1/series", params={
-            "device_id": "dev1",
-            "frame": "year",
-        })
+        response = client.get(
+            "/v1/series",
+            params={
+                "device_id": "dev1",
+                "frame": "year",
+            },
+        )
         assert response.status_code == 200
         body = response.json()
         assert "series" in body
@@ -283,13 +306,17 @@ class TestSeriesFrameAll:
     """Tests for frame=all aggregation using p1_monthly view."""
 
     def test_frame_all_returns_200_with_series(
-        self, client: TestClient,
+        self,
+        client: TestClient,
     ) -> None:
         """AC5: frame=all returns 200 with aggregated series data."""
-        response = client.get("/v1/series", params={
-            "device_id": "dev1",
-            "frame": "all",
-        })
+        response = client.get(
+            "/v1/series",
+            params={
+                "device_id": "dev1",
+                "frame": "all",
+            },
+        )
         assert response.status_code == 200
         body = response.json()
         assert "series" in body
@@ -306,30 +333,36 @@ class TestSeriesEmptyData:
     """Tests for empty data responses."""
 
     def test_no_data_returns_200_with_empty_series(
-        self, empty_client: TestClient,
+        self,
+        empty_client: TestClient,
     ) -> None:
         """AC8: No data in range returns 200 with empty series array."""
-        response = empty_client.get("/v1/series", params={
-            "device_id": "dev1",
-            "frame": "day",
-        })
+        response = empty_client.get(
+            "/v1/series",
+            params={
+                "device_id": "dev1",
+                "frame": "day",
+            },
+        )
         assert response.status_code == 200
         body = response.json()
         assert body["series"] == []
 
     def test_no_data_all_frames_return_empty(
-        self, empty_client: TestClient,
+        self,
+        empty_client: TestClient,
     ) -> None:
         """AC8: All frames return empty series when no data exists."""
         for frame in ("day", "month", "year", "all"):
-            response = empty_client.get("/v1/series", params={
-                "device_id": "dev1",
-                "frame": frame,
-            })
-            assert response.status_code == 200
-            assert response.json()["series"] == [], (
-                f"frame={frame} not empty"
+            response = empty_client.get(
+                "/v1/series",
+                params={
+                    "device_id": "dev1",
+                    "frame": frame,
+                },
             )
+            assert response.status_code == 200
+            assert response.json()["series"] == [], f"frame={frame} not empty"
 
 
 # ---------------------------------------------------------------------------
@@ -341,26 +374,34 @@ class TestSeriesResponseStructure:
     """Tests for overall response structure."""
 
     def test_response_contains_device_id_and_frame(
-        self, client: TestClient,
+        self,
+        client: TestClient,
     ) -> None:
         """AC1: Response includes device_id, frame, and series."""
-        response = client.get("/v1/series", params={
-            "device_id": "dev1",
-            "frame": "day",
-        })
+        response = client.get(
+            "/v1/series",
+            params={
+                "device_id": "dev1",
+                "frame": "day",
+            },
+        )
         body = response.json()
         assert body["device_id"] == "dev1"
         assert body["frame"] == "day"
         assert "series" in body
 
     def test_response_values_match_mock_data(
-        self, client: TestClient,
+        self,
+        client: TestClient,
     ) -> None:
         """Bucket values match the mocked database rows."""
-        response = client.get("/v1/series", params={
-            "device_id": "dev1",
-            "frame": "day",
-        })
+        response = client.get(
+            "/v1/series",
+            params={
+                "device_id": "dev1",
+                "frame": "day",
+            },
+        )
         series = response.json()["series"]
         assert series[0]["avg_power_w"] == 350
         assert series[0]["max_power_w"] == 800

@@ -184,8 +184,7 @@ class TestPollMeasurementConnectionError:
         assert len(caplog.records) >= 1
         assert caplog.records[0].levelno == logging.WARNING
         assert (
-            "Connection refused" in caplog.text
-            or "connection" in caplog.text.lower()
+            "Connection refused" in caplog.text or "connection" in caplog.text.lower()
         )
 
 
@@ -260,9 +259,7 @@ class TestPollMeasurementTimeout:
         """httpx.TimeoutException returns None (poll loop does not crash)."""
         with patch("edge.src.poller.httpx.Client") as MockClient:
             client_instance = MockClient.return_value.__enter__.return_value
-            client_instance.get.side_effect = httpx.TimeoutException(
-                "Read timed out"
-            )
+            client_instance.get.side_effect = httpx.TimeoutException("Read timed out")
 
             result = poll_measurement(host=_HOST, token=_TOKEN)
 
@@ -272,9 +269,7 @@ class TestPollMeasurementTimeout:
         """Timeout is logged at WARNING level."""
         with patch("edge.src.poller.httpx.Client") as MockClient:
             client_instance = MockClient.return_value.__enter__.return_value
-            client_instance.get.side_effect = httpx.TimeoutException(
-                "Read timed out"
-            )
+            client_instance.get.side_effect = httpx.TimeoutException("Read timed out")
 
             with caplog.at_level(logging.WARNING, logger="edge.src.poller"):
                 poll_measurement(host=_HOST, token=_TOKEN)

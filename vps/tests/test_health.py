@@ -9,12 +9,11 @@ TODO:
 - None
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 from src.main import app
-
 
 # ===========================================================================
 # Existing tests for GET /
@@ -105,9 +104,7 @@ class TestHealthEndpointDbDown:
     """GET /health returns 503 with status=degraded when DB is down."""
 
     @patch("src.api.health._check_redis", new_callable=AsyncMock, return_value="ok")
-    @patch(
-        "src.api.health._check_db", new_callable=AsyncMock, return_value="error"
-    )
+    @patch("src.api.health._check_db", new_callable=AsyncMock, return_value="error")
     def test_returns_503(self, mock_db, mock_redis):
         """AC1: Returns HTTP 503 when DB probe fails."""
         client = TestClient(app)
@@ -115,9 +112,7 @@ class TestHealthEndpointDbDown:
         assert response.status_code == 503
 
     @patch("src.api.health._check_redis", new_callable=AsyncMock, return_value="ok")
-    @patch(
-        "src.api.health._check_db", new_callable=AsyncMock, return_value="error"
-    )
+    @patch("src.api.health._check_db", new_callable=AsyncMock, return_value="error")
     def test_status_degraded_db_error(self, mock_db, mock_redis):
         """AC1: Response shows db=error and status=degraded."""
         client = TestClient(app)
@@ -165,9 +160,7 @@ class TestHealthEndpointAllDown:
         new_callable=AsyncMock,
         return_value="error",
     )
-    @patch(
-        "src.api.health._check_db", new_callable=AsyncMock, return_value="error"
-    )
+    @patch("src.api.health._check_db", new_callable=AsyncMock, return_value="error")
     def test_returns_503(self, mock_db, mock_redis):
         """AC1: Returns HTTP 503 when both DB and Redis are down."""
         client = TestClient(app)
@@ -179,9 +172,7 @@ class TestHealthEndpointAllDown:
         new_callable=AsyncMock,
         return_value="error",
     )
-    @patch(
-        "src.api.health._check_db", new_callable=AsyncMock, return_value="error"
-    )
+    @patch("src.api.health._check_db", new_callable=AsyncMock, return_value="error")
     def test_both_degraded(self, mock_db, mock_redis):
         """AC1: Response shows both db=error and redis=error."""
         client = TestClient(app)

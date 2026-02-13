@@ -88,7 +88,8 @@ class TestEdgeSettingsRequiredVars:
         assert "vps_ingest_url" in str(exc_info.value).lower()
 
     def test_missing_vps_device_token_raises(
-        self, monkeypatch: pytest.MonkeyPatch,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """VPS_DEVICE_TOKEN is required."""
         monkeypatch.setenv("HW_P1_HOST", "192.168.1.1")
@@ -161,7 +162,8 @@ class TestDeviceIdConfig:
     """DEVICE_ID defaults to hw_p1_host but can be overridden."""
 
     def test_device_id_defaults_to_hw_p1_host(
-        self, monkeypatch: pytest.MonkeyPatch,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """When DEVICE_ID is not set, it defaults to HW_P1_HOST."""
         monkeypatch.setenv("HW_P1_HOST", "192.168.1.5")
@@ -173,7 +175,8 @@ class TestDeviceIdConfig:
         assert settings.device_id == "192.168.1.5"
 
     def test_device_id_explicit_overrides_host(
-        self, monkeypatch: pytest.MonkeyPatch,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Explicit DEVICE_ID overrides the hw_p1_host default."""
         monkeypatch.setenv("HW_P1_HOST", "192.168.1.5")
@@ -189,9 +192,7 @@ class TestDeviceIdConfig:
 class TestNumericConstraints:
     """Numeric configuration values must be within valid ranges."""
 
-    def test_poll_interval_zero_rejected(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_poll_interval_zero_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """POLL_INTERVAL_S must be >= 1."""
         monkeypatch.setenv("HW_P1_HOST", "192.168.1.1")
         monkeypatch.setenv("HW_P1_TOKEN", "token")
@@ -216,9 +217,7 @@ class TestNumericConstraints:
         with pytest.raises(ValidationError):
             EdgeSettings()
 
-    def test_batch_size_zero_rejected(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_batch_size_zero_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """BATCH_SIZE must be >= 1."""
         monkeypatch.setenv("HW_P1_HOST", "192.168.1.1")
         monkeypatch.setenv("HW_P1_TOKEN", "token")
@@ -244,9 +243,7 @@ class TestNumericConstraints:
             EdgeSettings()
         assert "batch_size" in str(exc_info.value).lower()
 
-    def test_valid_custom_numeric_values(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_valid_custom_numeric_values(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Custom valid numeric values are accepted."""
         monkeypatch.setenv("HW_P1_HOST", "192.168.1.1")
         monkeypatch.setenv("HW_P1_TOKEN", "token")

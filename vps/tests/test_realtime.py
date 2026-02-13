@@ -36,8 +36,12 @@ SAMPLE_DICT = {
     "energy_export_kwh": 78.9,
 }
 REQUIRED_FIELDS = {
-    "device_id", "ts", "power_w", "import_power_w",
-    "energy_import_kwh", "energy_export_kwh",
+    "device_id",
+    "ts",
+    "power_w",
+    "import_power_w",
+    "energy_import_kwh",
+    "energy_export_kwh",
 }
 
 
@@ -75,6 +79,7 @@ def client(mock_db_session: AsyncMock) -> TestClient:
     Returns:
         TestClient: Configured test client with dependency overrides.
     """
+
     async def override_get_session():
         yield mock_db_session
 
@@ -110,7 +115,9 @@ class TestCacheHit:
     """Tests for Redis cache hit scenario."""
 
     def test_cache_hit_returns_cached_json_no_db_call(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC3: Cache hit returns cached JSON without querying the database."""
         cached_json = json.dumps(SAMPLE_DICT)
@@ -118,7 +125,8 @@ class TestCacheHit:
         mock_redis.get.return_value = cached_json
 
         with patch(
-            "src.api.realtime.get_redis", new_callable=AsyncMock,
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
             return_value=mock_redis,
         ):
             response = client.get(f"/v1/realtime?device_id={DEVICE_ID}")
@@ -128,7 +136,8 @@ class TestCacheHit:
         mock_db_session.execute.assert_not_awaited()
 
     def test_cache_hit_closes_redis_connection(
-        self, client: TestClient,
+        self,
+        client: TestClient,
     ) -> None:
         """Cache hit closes the Redis connection after use."""
         cached_json = json.dumps(SAMPLE_DICT)
@@ -136,7 +145,8 @@ class TestCacheHit:
         mock_redis.get.return_value = cached_json
 
         with patch(
-            "src.api.realtime.get_redis", new_callable=AsyncMock,
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
             return_value=mock_redis,
         ):
             client.get(f"/v1/realtime?device_id={DEVICE_ID}")
@@ -153,7 +163,9 @@ class TestCacheMissDbHit:
     """Tests for cache miss with data in the database."""
 
     def test_cache_miss_queries_db_and_returns_data(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC4: Cache miss queries the DB and returns the latest sample."""
         mock_redis = AsyncMock()
@@ -165,7 +177,8 @@ class TestCacheMissDbHit:
         mock_db_session.execute.return_value = result_mock
 
         with patch(
-            "src.api.realtime.get_redis", new_callable=AsyncMock,
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
             return_value=mock_redis,
         ):
             response = client.get(f"/v1/realtime?device_id={DEVICE_ID}")
@@ -180,7 +193,9 @@ class TestCacheMissDbHit:
         mock_db_session.execute.assert_awaited_once()
 
     def test_cache_miss_caches_result_with_ttl(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC5: Cache miss caches the DB result with CACHE_TTL_S TTL."""
         mock_redis = AsyncMock()
@@ -192,7 +207,8 @@ class TestCacheMissDbHit:
         mock_db_session.execute.return_value = result_mock
 
         with patch(
-            "src.api.realtime.get_redis", new_callable=AsyncMock,
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
             return_value=mock_redis,
         ):
             client.get(f"/v1/realtime?device_id={DEVICE_ID}")
@@ -214,7 +230,9 @@ class TestCacheMissNoData:
     """Tests for cache miss with no data in the database."""
 
     def test_no_data_returns_404(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC6: Unknown device_id (no DB data) returns 404 Not Found."""
         mock_redis = AsyncMock()
@@ -225,11 +243,12 @@ class TestCacheMissNoData:
         mock_db_session.execute.return_value = result_mock
 
         with patch(
-            "src.api.realtime.get_redis", new_callable=AsyncMock,
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
             return_value=mock_redis,
         ):
             response = client.get(
-                f"/v1/realtime?device_id=unknown-device",
+                "/v1/realtime?device_id=unknown-device",
             )
 
         assert response.status_code == 404
@@ -245,7 +264,9 @@ class TestResponseSchema:
     """Tests for response schema completeness."""
 
     def test_response_includes_all_required_fields(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """AC2: Response contains all required fields."""
         mock_redis = AsyncMock()
@@ -257,7 +278,8 @@ class TestResponseSchema:
         mock_db_session.execute.return_value = result_mock
 
         with patch(
-            "src.api.realtime.get_redis", new_callable=AsyncMock,
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
             return_value=mock_redis,
         ):
             response = client.get(f"/v1/realtime?device_id={DEVICE_ID}")
@@ -267,7 +289,8 @@ class TestResponseSchema:
         assert set(body.keys()) == REQUIRED_FIELDS
 
     def test_response_from_cache_includes_all_required_fields(
-        self, client: TestClient,
+        self,
+        client: TestClient,
     ) -> None:
         """AC2: Cached response also contains all required fields."""
         cached_json = json.dumps(SAMPLE_DICT)
@@ -275,7 +298,8 @@ class TestResponseSchema:
         mock_redis.get.return_value = cached_json
 
         with patch(
-            "src.api.realtime.get_redis", new_callable=AsyncMock,
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
             return_value=mock_redis,
         ):
             response = client.get(f"/v1/realtime?device_id={DEVICE_ID}")
@@ -294,7 +318,9 @@ class TestRedisFailure:
     """Tests for graceful Redis failure handling."""
 
     def test_redis_get_failure_falls_through_to_db(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """Redis get() failure falls through to DB query and returns data."""
         mock_redis = AsyncMock()
@@ -306,7 +332,8 @@ class TestRedisFailure:
         mock_db_session.execute.return_value = result_mock
 
         with patch(
-            "src.api.realtime.get_redis", new_callable=AsyncMock,
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
             return_value=mock_redis,
         ):
             response = client.get(f"/v1/realtime?device_id={DEVICE_ID}")
@@ -317,7 +344,9 @@ class TestRedisFailure:
         mock_db_session.execute.assert_awaited_once()
 
     def test_redis_set_failure_still_returns_data(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """Redis set() failure still returns data from DB successfully."""
         mock_redis = AsyncMock()
@@ -330,7 +359,8 @@ class TestRedisFailure:
         mock_db_session.execute.return_value = result_mock
 
         with patch(
-            "src.api.realtime.get_redis", new_callable=AsyncMock,
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
             return_value=mock_redis,
         ):
             response = client.get(f"/v1/realtime?device_id={DEVICE_ID}")
@@ -340,7 +370,9 @@ class TestRedisFailure:
         assert body["device_id"] == DEVICE_ID
 
     def test_redis_connection_failure_falls_through_to_db(
-        self, client: TestClient, mock_db_session: AsyncMock,
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
     ) -> None:
         """get_redis() failure falls through to DB query and returns data."""
         db_row = _make_db_row()
@@ -349,7 +381,8 @@ class TestRedisFailure:
         mock_db_session.execute.return_value = result_mock
 
         with patch(
-            "src.api.realtime.get_redis", new_callable=AsyncMock,
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
             side_effect=ConnectionError("Cannot connect to Redis"),
         ):
             response = client.get(f"/v1/realtime?device_id={DEVICE_ID}")

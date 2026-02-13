@@ -24,6 +24,7 @@ from edge.src.spool import Spool
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_sample(
     device_id: str = "device-abc",
     ts: str = "2026-02-13T10:00:00Z",
@@ -134,9 +135,7 @@ class TestEnqueueAndPeek:
         assert rows[0]["energy_export_kwh"] is None
         spool.close()
 
-    def test_peek_on_empty_spool_returns_empty_list(
-        self, tmp_path: Path
-    ) -> None:
+    def test_peek_on_empty_spool_returns_empty_list(self, tmp_path: Path) -> None:
         """AC3: peek on empty spool returns an empty list."""
         spool = Spool(path=tmp_path / "spool.db")
 
@@ -149,9 +148,7 @@ class TestEnqueueAndPeek:
         """AC3: peek(n) returns at most n rows."""
         spool = Spool(path=tmp_path / "spool.db")
         for i in range(5):
-            spool.enqueue(
-                _make_sample(ts=f"2026-02-13T10:00:0{i}Z")
-            )
+            spool.enqueue(_make_sample(ts=f"2026-02-13T10:00:0{i}Z"))
 
         rows = spool.peek(3)
 
@@ -183,9 +180,7 @@ class TestFIFOOrdering:
         assert [r["ts"] for r in rows] == timestamps
         spool.close()
 
-    def test_multiple_enqueues_maintain_insertion_order(
-        self, tmp_path: Path
-    ) -> None:
+    def test_multiple_enqueues_maintain_insertion_order(self, tmp_path: Path) -> None:
         """Multiple enqueues maintain insertion order across peek calls."""
         spool = Spool(path=tmp_path / "spool.db")
         devices = ["dev-1", "dev-2", "dev-3", "dev-4", "dev-5"]
@@ -213,9 +208,7 @@ class TestAck:
         """AC4: ack deletes the acknowledged rows."""
         spool = Spool(path=tmp_path / "spool.db")
         for i in range(3):
-            spool.enqueue(
-                _make_sample(ts=f"2026-02-13T10:00:0{i}Z")
-            )
+            spool.enqueue(_make_sample(ts=f"2026-02-13T10:00:0{i}Z"))
 
         rows = spool.peek(3)
         # Ack the first two rows
@@ -254,9 +247,7 @@ class TestAck:
         assert spool.count() == 1
         spool.close()
 
-    def test_ack_nonexistent_rowids_does_not_raise(
-        self, tmp_path: Path
-    ) -> None:
+    def test_ack_nonexistent_rowids_does_not_raise(self, tmp_path: Path) -> None:
         """ack with nonexistent rowids completes without error."""
         spool = Spool(path=tmp_path / "spool.db")
         spool.enqueue(_make_sample())
@@ -335,9 +326,7 @@ class TestCount:
 class TestPersistence:
     """Spool DB file persists data across process restarts (re-instantiation)."""
 
-    def test_data_persists_after_close_and_reopen(
-        self, tmp_path: Path
-    ) -> None:
+    def test_data_persists_after_close_and_reopen(self, tmp_path: Path) -> None:
         """AC6: Samples survive closing and reopening the spool."""
         db_path = tmp_path / "persist.db"
 
@@ -362,18 +351,14 @@ class TestPersistence:
         assert rows[1]["ts"] == "2026-02-13T10:00:01Z"
         spool2.close()
 
-    def test_ack_persists_after_close_and_reopen(
-        self, tmp_path: Path
-    ) -> None:
+    def test_ack_persists_after_close_and_reopen(self, tmp_path: Path) -> None:
         """AC6: Acknowledged (deleted) rows stay deleted after restart."""
         db_path = tmp_path / "ack_persist.db"
 
         # First process: enqueue 3, ack 1
         spool1 = Spool(path=db_path)
         for i in range(3):
-            spool1.enqueue(
-                _make_sample(ts=f"2026-02-13T10:00:0{i}Z")
-            )
+            spool1.enqueue(_make_sample(ts=f"2026-02-13T10:00:0{i}Z"))
         rows = spool1.peek(1)
         spool1.ack([rows[0]["rowid"]])
         spool1.close()

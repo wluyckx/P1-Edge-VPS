@@ -75,6 +75,7 @@ def client(mock_db_session: AsyncMock) -> TestClient:
     Returns:
         TestClient: Configured test client with dependency overrides.
     """
+
     async def override_get_session():
         yield mock_db_session
 
@@ -101,6 +102,7 @@ def unauth_client(mock_db_session: AsyncMock) -> TestClient:
     Returns:
         TestClient: Test client without auth override.
     """
+
     async def override_get_session():
         yield mock_db_session
 
@@ -121,11 +123,14 @@ class TestIngestHappyPath:
     """Tests for successful ingest requests."""
 
     def test_valid_batch_returns_200_with_insert_count(
-        self, client: TestClient, sample_data: dict,
+        self,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC1/AC5: Valid batch returns 200 with inserted count."""
         with patch(
-            "src.api.ingest.invalidate_device_cache", new_callable=AsyncMock,
+            "src.api.ingest.invalidate_device_cache",
+            new_callable=AsyncMock,
         ):
             response = client.post(
                 "/v1/ingest",
@@ -138,11 +143,14 @@ class TestIngestHappyPath:
         assert isinstance(body["inserted"], int)
 
     def test_valid_batch_optional_fields_returns_200(
-        self, client: TestClient, sample_data: dict,
+        self,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC2: Samples with optional fields omitted are accepted."""
         with patch(
-            "src.api.ingest.invalidate_device_cache", new_callable=AsyncMock,
+            "src.api.ingest.invalidate_device_cache",
+            new_callable=AsyncMock,
         ):
             response = client.post(
                 "/v1/ingest",
@@ -153,7 +161,10 @@ class TestIngestHappyPath:
         assert response.json()["inserted"] >= 0
 
     def test_insert_count_reflects_rowcount(
-        self, mock_db_session: AsyncMock, client: TestClient, sample_data: dict,
+        self,
+        mock_db_session: AsyncMock,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC5: Inserted count matches database rowcount."""
         result = MagicMock()
@@ -161,7 +172,8 @@ class TestIngestHappyPath:
         mock_db_session.execute.return_value = result
 
         with patch(
-            "src.api.ingest.invalidate_device_cache", new_callable=AsyncMock,
+            "src.api.ingest.invalidate_device_cache",
+            new_callable=AsyncMock,
         ):
             response = client.post(
                 "/v1/ingest",
@@ -181,7 +193,10 @@ class TestIngestIdempotency:
     """Tests for idempotent ingestion (ON CONFLICT DO NOTHING)."""
 
     def test_duplicate_batch_returns_inserted_zero(
-        self, mock_db_session: AsyncMock, client: TestClient, sample_data: dict,
+        self,
+        mock_db_session: AsyncMock,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC4: Duplicate batch (same device_id+ts) returns inserted=0."""
         result = MagicMock()
@@ -189,7 +204,8 @@ class TestIngestIdempotency:
         mock_db_session.execute.return_value = result
 
         with patch(
-            "src.api.ingest.invalidate_device_cache", new_callable=AsyncMock,
+            "src.api.ingest.invalidate_device_cache",
+            new_callable=AsyncMock,
         ):
             response = client.post(
                 "/v1/ingest",
@@ -209,7 +225,9 @@ class TestIngestValidation:
     """Tests for Pydantic request validation (422 errors)."""
 
     def test_missing_required_fields_returns_422(
-        self, client: TestClient, sample_data: dict,
+        self,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC7: Missing required fields (power_w, import_power_w) → 422."""
         response = client.post(
@@ -219,7 +237,9 @@ class TestIngestValidation:
         assert response.status_code == 422
 
     def test_wrong_type_returns_422(
-        self, client: TestClient, sample_data: dict,
+        self,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC7: Wrong field type (string for int) → 422."""
         response = client.post(
@@ -229,7 +249,9 @@ class TestIngestValidation:
         assert response.status_code == 422
 
     def test_missing_samples_key_returns_422(
-        self, client: TestClient, sample_data: dict,
+        self,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC7: Missing 'samples' key in body → 422."""
         response = client.post(
@@ -265,7 +287,9 @@ class TestIngestAuth:
     """Tests for authentication enforcement."""
 
     def test_missing_auth_returns_401(
-        self, unauth_client: TestClient, sample_data: dict,
+        self,
+        unauth_client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC6: Missing Authorization header → 401."""
         response = unauth_client.post(
@@ -275,7 +299,9 @@ class TestIngestAuth:
         assert response.status_code == 401
 
     def test_invalid_token_returns_401(
-        self, unauth_client: TestClient, sample_data: dict,
+        self,
+        unauth_client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC6: Invalid Bearer token → 401."""
         response = unauth_client.post(
@@ -295,7 +321,9 @@ class TestIngestDeviceIdMismatch:
     """Tests for device_id authorization check."""
 
     def test_wrong_device_id_returns_403(
-        self, client: TestClient, sample_data: dict,
+        self,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC8: Sample device_id != authenticated device_id → 403."""
         response = client.post(
@@ -305,7 +333,9 @@ class TestIngestDeviceIdMismatch:
         assert response.status_code == 403
 
     def test_mixed_device_ids_returns_403(
-        self, client: TestClient, sample_data: dict,
+        self,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC8: Mix of matching and non-matching device_ids → 403."""
         response = client.post(
@@ -324,11 +354,14 @@ class TestIngestCacheInvalidation:
     """Tests for Redis cache invalidation after ingest."""
 
     def test_successful_ingest_calls_redis_delete(
-        self, client: TestClient, sample_data: dict,
+        self,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC9: Successful ingest calls Redis delete on 'realtime:{device_id}'."""
         with patch(
-            "src.api.ingest.invalidate_device_cache", new_callable=AsyncMock,
+            "src.api.ingest.invalidate_device_cache",
+            new_callable=AsyncMock,
         ) as mock_invalidate:
             response = client.post(
                 "/v1/ingest",
@@ -339,7 +372,9 @@ class TestIngestCacheInvalidation:
         mock_invalidate.assert_awaited_once_with("dev1")
 
     def test_redis_failure_does_not_break_ingest(
-        self, client: TestClient, sample_data: dict,
+        self,
+        client: TestClient,
+        sample_data: dict,
     ) -> None:
         """AC9: Redis failure is best-effort; ingest still succeeds."""
         with patch(
@@ -439,12 +474,14 @@ class TestRedisClient:
     async def test_invalidate_device_cache_deletes_correct_key(self) -> None:
         """invalidate_device_cache deletes 'realtime:{device_id}' key."""
         with patch(
-            "src.cache.redis_client.get_redis", new_callable=AsyncMock,
+            "src.cache.redis_client.get_redis",
+            new_callable=AsyncMock,
         ) as mock_get_redis:
             mock_redis = AsyncMock()
             mock_get_redis.return_value = mock_redis
 
             from src.cache.redis_client import invalidate_device_cache
+
             await invalidate_device_cache("dev1")
 
             mock_redis.delete.assert_awaited_once_with("realtime:dev1")
@@ -454,9 +491,11 @@ class TestRedisClient:
     async def test_invalidate_device_cache_handles_connection_error(self) -> None:
         """invalidate_device_cache suppresses connection errors gracefully."""
         with patch(
-            "src.cache.redis_client.get_redis", new_callable=AsyncMock,
+            "src.cache.redis_client.get_redis",
+            new_callable=AsyncMock,
             side_effect=ConnectionError("Redis unavailable"),
         ):
             from src.cache.redis_client import invalidate_device_cache
+
             # Should not raise
             await invalidate_device_cache("dev1")

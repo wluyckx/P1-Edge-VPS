@@ -358,9 +358,7 @@ class TestFailedUpload:
         uploader = _make_uploader(spool)
 
         with patch.object(uploader, "_client") as mock_client:
-            mock_client.post.side_effect = httpx.ConnectError(
-                "Connection refused"
-            )
+            mock_client.post.side_effect = httpx.ConnectError("Connection refused")
             result = uploader.upload_batch()
 
         assert result is False
@@ -375,9 +373,7 @@ class TestFailedUpload:
         uploader = _make_uploader(spool)
 
         with patch.object(uploader, "_client") as mock_client:
-            mock_client.post.side_effect = httpx.TimeoutException(
-                "Read timed out"
-            )
+            mock_client.post.side_effect = httpx.TimeoutException("Read timed out")
             result = uploader.upload_batch()
 
         assert result is False
@@ -407,9 +403,7 @@ class TestFailedUpload:
         uploader = _make_uploader(spool)
 
         with patch.object(uploader, "_client") as mock_client:
-            mock_client.post.side_effect = httpx.ConnectError(
-                "Connection refused"
-            )
+            mock_client.post.side_effect = httpx.ConnectError("Connection refused")
             result = uploader.upload_batch()
 
         assert result is False
@@ -439,9 +433,7 @@ class TestExponentialBackoff:
         uploader = _make_uploader(spool)
 
         with patch.object(uploader, "_client") as mock_client:
-            mock_client.post.return_value = _mock_response(
-                status_code=500
-            )
+            mock_client.post.return_value = _mock_response(status_code=500)
 
             uploader.upload_batch()
             assert uploader.current_backoff == 2.0
@@ -462,9 +454,7 @@ class TestExponentialBackoff:
         expected = [1.0, 2.0, 4.0, 8.0, 16.0, 32.0]
 
         with patch.object(uploader, "_client") as mock_client:
-            mock_client.post.return_value = _mock_response(
-                status_code=500
-            )
+            mock_client.post.return_value = _mock_response(status_code=500)
 
             for i, expected_backoff in enumerate(expected):
                 assert uploader.current_backoff == expected_backoff, (
@@ -482,9 +472,7 @@ class TestExponentialBackoff:
         uploader = _make_uploader(spool, max_backoff=10.0)
 
         with patch.object(uploader, "_client") as mock_client:
-            mock_client.post.return_value = _mock_response(
-                status_code=500
-            )
+            mock_client.post.return_value = _mock_response(status_code=500)
 
             # Fail many times: 1 -> 2 -> 4 -> 8 -> 10 -> 10
             for _ in range(10):
@@ -501,9 +489,7 @@ class TestExponentialBackoff:
         uploader = _make_uploader(spool)
 
         with patch.object(uploader, "_client") as mock_client:
-            mock_client.post.side_effect = httpx.ConnectError(
-                "Connection refused"
-            )
+            mock_client.post.side_effect = httpx.ConnectError("Connection refused")
 
             uploader.upload_batch()
             assert uploader.current_backoff == 2.0
@@ -530,17 +516,13 @@ class TestBackoffReset:
 
         with patch.object(uploader, "_client") as mock_client:
             # Fail twice: backoff goes 1 -> 2 -> 4
-            mock_client.post.return_value = _mock_response(
-                status_code=500
-            )
+            mock_client.post.return_value = _mock_response(status_code=500)
             uploader.upload_batch()
             uploader.upload_batch()
             assert uploader.current_backoff == 4.0
 
             # Succeed: backoff resets to 1
-            mock_client.post.return_value = _mock_response(
-                status_code=200
-            )
+            mock_client.post.return_value = _mock_response(status_code=200)
             uploader.upload_batch()
             assert uploader.current_backoff == 1.0
 
@@ -554,18 +536,14 @@ class TestBackoffReset:
 
         with patch.object(uploader, "_client") as mock_client:
             # Fail many times
-            mock_client.post.return_value = _mock_response(
-                status_code=500
-            )
+            mock_client.post.return_value = _mock_response(status_code=500)
             for _ in range(15):
                 uploader.upload_batch()
 
             assert uploader.current_backoff == 300.0
 
             # One success resets everything
-            mock_client.post.return_value = _mock_response(
-                status_code=200
-            )
+            mock_client.post.return_value = _mock_response(status_code=200)
             uploader.upload_batch()
             assert uploader.current_backoff == 1.0
 
@@ -579,9 +557,7 @@ class TestBackoffReset:
         with patch.object(uploader, "_client") as mock_client:
             # Fail once: backoff goes to 2
             spool.peek.return_value = rows
-            mock_client.post.return_value = _mock_response(
-                status_code=500
-            )
+            mock_client.post.return_value = _mock_response(status_code=500)
             uploader.upload_batch()
             assert uploader.current_backoff == 2.0
 
@@ -603,7 +579,8 @@ class TestUrlNormalisation:
         """Trailing slash on ingest URL does not produce double-slash."""
         spool = MagicMock()
         uploader = _make_uploader(
-            spool, ingest_url="https://vps.example.com/",
+            spool,
+            ingest_url="https://vps.example.com/",
         )
         assert uploader._ingest_url == "https://vps.example.com"
 
@@ -611,6 +588,7 @@ class TestUrlNormalisation:
         """URL without trailing slash is unchanged."""
         spool = MagicMock()
         uploader = _make_uploader(
-            spool, ingest_url="https://vps.example.com",
+            spool,
+            ingest_url="https://vps.example.com",
         )
         assert uploader._ingest_url == "https://vps.example.com"

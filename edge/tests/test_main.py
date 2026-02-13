@@ -21,10 +21,7 @@ import signal
 import threading
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from edge.src.logging_config import JSONFormatter, setup_logging
-
 
 # ====================================================================
 # AC1: Structured JSON logging
@@ -129,7 +126,6 @@ class TestSignalHandlers:
     ) -> None:
         """SIGTERM handler is registered during main()."""
         from edge.src.main import (
-            _signal_handler,
             shutdown_event,
         )
 

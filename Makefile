@@ -14,11 +14,11 @@ test-vps:
 
 # Lint (zero warnings required)
 lint:
-	ruff check edge/src/ vps/src/
+	ruff check edge/src/ edge/tests/ vps/src/ vps/tests/
 
 # Format check (DoD gate)
 format:
-	ruff format --check edge/src/ vps/src/
+	ruff format --check edge/src/ edge/tests/ vps/src/ vps/tests/
 
 # Combined check (lint + format + test)
 check: lint format test

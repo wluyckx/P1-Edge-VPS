@@ -105,9 +105,7 @@ class TestBearerAuthVerify:
         app = _make_test_app(token_map)
         client = TestClient(app)
 
-        response = client.get(
-            "/protected", headers={"Authorization": "Bearer tokenA"}
-        )
+        response = client.get("/protected", headers={"Authorization": "Bearer tokenA"})
 
         assert response.status_code == 200
         assert response.json() == {"device_id": "device-1"}
@@ -118,9 +116,7 @@ class TestBearerAuthVerify:
         app = _make_test_app(token_map)
         client = TestClient(app)
 
-        response = client.get(
-            "/protected", headers={"Authorization": "Bearer tokenB"}
-        )
+        response = client.get("/protected", headers={"Authorization": "Bearer tokenB"})
 
         assert response.status_code == 200
         assert response.json() == {"device_id": "device-2"}
@@ -131,9 +127,7 @@ class TestBearerAuthVerify:
         app = _make_test_app(token_map)
         client = TestClient(app)
 
-        response = client.get(
-            "/protected", headers={"Authorization": "Bearer wrong-token"}
-        )
+        response = client.get("/protected", headers={"Authorization": "Bearer wrong-token"})
 
         assert response.status_code == 401
         assert "detail" in response.json()
@@ -154,9 +148,7 @@ class TestBearerAuthVerify:
         app = _make_test_app(token_map)
         client = TestClient(app)
 
-        response = client.get(
-            "/protected", headers={"Authorization": "Basic tokenA"}
-        )
+        response = client.get("/protected", headers={"Authorization": "Basic tokenA"})
 
         assert response.status_code == 401
 
@@ -166,9 +158,7 @@ class TestBearerAuthVerify:
         app = _make_test_app(token_map)
         client = TestClient(app)
 
-        response = client.get(
-            "/protected", headers={"Authorization": "Bearer "}
-        )
+        response = client.get("/protected", headers={"Authorization": "Bearer "})
 
         assert response.status_code == 401
 
