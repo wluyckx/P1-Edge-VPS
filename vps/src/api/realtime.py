@@ -3,9 +3,11 @@ Realtime metrics API endpoint for P1 energy telemetry.
 
 Serves the latest sample for a given device_id via GET /v1/realtime.
 Uses Redis as a read-through cache with TTL-based expiry. Cache operations
-are best-effort: Redis failures fall through to the database.
+are best-effort: Redis failures fall through to the database. Requires
+Bearer token authentication; callers can only access their own device data.
 
 CHANGELOG:
+- 2026-02-14: Add Bearer auth and device_id mismatch validation (STORY-016)
 - 2026-02-13: Initial creation (STORY-010)
 
 TODO:
@@ -20,7 +22,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from src.api.deps import DbSession
+from src.api.deps import CurrentDeviceId, DbSession
 from src.cache.redis_client import get_redis
 from src.config import get_settings
 
@@ -124,24 +126,36 @@ async def _cache_set(device_id: str, data: dict) -> None:
 @router.get("/realtime", response_model=RealtimeResponse)
 async def get_realtime(
     db: DbSession,
+    auth_device_id: CurrentDeviceId,
     device_id: str = Query(..., description="Device identifier"),
 ) -> RealtimeResponse:
     """Return the latest P1 sample for a device.
 
-    Checks Redis cache first; on miss, queries the database for the most
-    recent sample, caches the result, and returns it. Returns 404 if no
-    data exists for the given device_id.
+    Requires Bearer token authentication. The query parameter device_id
+    must match the authenticated device_id from the token. Checks Redis
+    cache first; on miss, queries the database for the most recent
+    sample, caches the result, and returns it. Returns 404 if no data
+    exists for the given device_id.
 
     Args:
         db: Async database session (injected).
+        auth_device_id: Authenticated device_id from Bearer token.
         device_id: Device identifier from query parameter.
 
     Returns:
         RealtimeResponse: Latest sample data.
 
     Raises:
+        HTTPException: 401 if missing/invalid Bearer token.
+        HTTPException: 403 if device_id does not match authenticated device.
         HTTPException: 404 if no data found for the device_id.
     """
+    # STORY-016 AC4: Verify query device_id matches authenticated device
+    if device_id != auth_device_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Device ID mismatch",
+        )
     # AC3: Try cache first
     cached = await _cache_get(device_id)
     if cached is not None:

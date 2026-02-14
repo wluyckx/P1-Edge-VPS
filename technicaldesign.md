@@ -1,7 +1,7 @@
 # Technical Design — P1-Edge-VPS Energy Telemetry Platform
 
-**Last Updated**: 2026-02-13
-**Version**: 1.0
+**Last Updated**: 2026-02-14
+**Version**: 1.1
 
 ---
 
@@ -300,17 +300,18 @@ Sending the same batch twice is safe — duplicates are silently skipped.
 
 **Description**: Get the latest power reading for a device. Redis-cached.
 
-**Authentication**: Not required (public endpoint)
+**Authentication**: Required (Bearer token — STORY-016)
 
 **Request**:
 ```http
 GET /v1/realtime?device_id=hw-p1-001 HTTP/1.1
+Authorization: Bearer {device_token}
 ```
 
 **Query Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `device_id` | string | Yes | Device identifier |
+| `device_id` | string | Yes | Device identifier (must match authenticated device_id) |
 
 **Response** (200 OK):
 ```json
@@ -327,6 +328,8 @@ GET /v1/realtime?device_id=hw-p1-001 HTTP/1.1
 **Error Responses**:
 | Status | Condition | Body |
 |--------|-----------|------|
+| 401 | Missing/invalid Bearer token | `{"detail": "Not authenticated"}` |
+| 403 | Query device_id does not match authenticated device | `{"detail": "Device ID mismatch"}` |
 | 404 | No data for device_id | `{"detail": "No data for device"}` |
 
 **Caching**: Redis key `realtime:{device_id}`, TTL = `CACHE_TTL_S` (default 5s).
@@ -338,11 +341,12 @@ Cache-first: check Redis → on miss query DB → cache result.
 
 **Description**: Belgian capacity tariff (kwartierpiek) data for a given month.
 
-**Authentication**: Not required (public endpoint)
+**Authentication**: Required (Bearer token — STORY-016)
 
 **Request**:
 ```http
 GET /v1/capacity/month/2026-01?device_id=hw-p1-001 HTTP/1.1
+Authorization: Bearer {device_token}
 ```
 
 **Path Parameters**:
@@ -353,7 +357,7 @@ GET /v1/capacity/month/2026-01?device_id=hw-p1-001 HTTP/1.1
 **Query Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `device_id` | string | Yes | Device identifier |
+| `device_id` | string | Yes | Device identifier (must match authenticated device_id) |
 
 **Response** (200 OK):
 ```json
@@ -373,6 +377,8 @@ GET /v1/capacity/month/2026-01?device_id=hw-p1-001 HTTP/1.1
 | Status | Condition | Body |
 |--------|-----------|------|
 | 400 | Invalid month format (not YYYY-MM) | `{"detail": "Invalid month format"}` |
+| 401 | Missing/invalid Bearer token | `{"detail": "Not authenticated"}` |
+| 403 | Query device_id does not match authenticated device | `{"detail": "Device ID mismatch"}` |
 
 **SQL**:
 ```sql
@@ -391,17 +397,18 @@ ORDER BY bucket;
 
 **Description**: Aggregated historical energy data with configurable time frame.
 
-**Authentication**: Not required (public endpoint)
+**Authentication**: Required (Bearer token — STORY-016)
 
 **Request**:
 ```http
 GET /v1/series?device_id=hw-p1-001&frame=day HTTP/1.1
+Authorization: Bearer {device_token}
 ```
 
 **Query Parameters**:
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `device_id` | string | Yes | Device identifier |
+| `device_id` | string | Yes | Device identifier (must match authenticated device_id) |
 | `frame` | string | Yes | Time frame: `day`, `month`, `year`, `all` |
 
 **Frame-to-Interval Mapping**:
@@ -433,6 +440,8 @@ GET /v1/series?device_id=hw-p1-001&frame=day HTTP/1.1
 | Status | Condition | Body |
 |--------|-----------|------|
 | 400 | Invalid frame parameter | `{"detail": "Invalid frame. Must be one of: day, month, year, all"}` |
+| 401 | Missing/invalid Bearer token | `{"detail": "Not authenticated"}` |
+| 403 | Query device_id does not match authenticated device | `{"detail": "Device ID mismatch"}` |
 
 ---
 
@@ -471,23 +480,28 @@ GET /v1/series?device_id=hw-p1-001&frame=day HTTP/1.1
 
 ### Authentication Flow
 
+All API endpoints require Bearer token authentication. The same token-to-device
+mapping is used for both ingest (write) and read endpoints (STORY-016).
+
 ```
-Edge Device                           VPS API
+Client / Edge Device                  VPS API
     │                                    │
-    │  POST /v1/ingest                   │
+    │  Any /v1/* request                 │
     │  Authorization: Bearer {token}     │
-    │  {"samples": [...]}                │
     │───────────────────────────────────>│
     │                                    │ 1. Extract Bearer token
     │                                    │ 2. Lookup token in DEVICE_TOKENS map
     │                                    │ 3. If not found → 401
     │                                    │ 4. Extract device_id from token map
-    │                                    │ 5. Validate all sample.device_id == device_id
+    │                                    │ 5. Validate request device_id == auth device_id
     │                                    │ 6. If mismatch → 403
-    │                                    │ 7. Proceed with upsert
-    │  200 {"inserted": N}               │
+    │                                    │ 7. Proceed with request
+    │  Response                          │
     │<───────────────────────────────────│
 ```
+
+**Ingest**: device_id validated from request body (`samples[].device_id`).
+**Read endpoints**: device_id validated from query parameter (`?device_id=`).
 
 ### Rate Limiting
 

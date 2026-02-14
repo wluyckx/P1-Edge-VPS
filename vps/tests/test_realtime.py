@@ -1,11 +1,12 @@
 """
-Tests for the realtime API endpoint (STORY-010).
+Tests for the realtime API endpoint (STORY-010, STORY-016).
 
 Validates GET /v1/realtime?device_id={id}: Redis cache hit, cache miss with
-DB data, cache miss with no data (404), response schema, and graceful Redis
-failure handling.
+DB data, cache miss with no data (404), response schema, graceful Redis
+failure handling, and Bearer auth enforcement (401/403).
 
 CHANGELOG:
+- 2026-02-14: Add Bearer auth tests (401/403) and update fixtures (STORY-016)
 - 2026-02-13: Initial creation (STORY-010)
 
 TODO:
@@ -18,6 +19,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from src.api.deps import get_current_device_id
 from src.db.session import get_async_session
 from src.main import app
 
@@ -71,7 +73,10 @@ def mock_db_session() -> AsyncMock:
 
 @pytest.fixture()
 def client(mock_db_session: AsyncMock) -> TestClient:
-    """Create a TestClient with mocked DB session (no auth needed for realtime).
+    """Create a TestClient with mocked DB session and auth dependency.
+
+    Auth dependency is overridden to return 'dev1' as the authenticated
+    device_id, matching the DEVICE_TOKENS configuration.
 
     Args:
         mock_db_session: Mock async database session.
@@ -83,7 +88,35 @@ def client(mock_db_session: AsyncMock) -> TestClient:
     async def override_get_session():
         yield mock_db_session
 
+    async def override_device_id():
+        return "dev1"
+
     app.dependency_overrides[get_async_session] = override_get_session
+    app.dependency_overrides[get_current_device_id] = override_device_id
+
+    yield TestClient(app)
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def unauth_client(mock_db_session: AsyncMock) -> TestClient:
+    """Create a TestClient with mocked DB but NO auth override.
+
+    Uses the real BearerAuth dependency so auth failures can be tested.
+
+    Args:
+        mock_db_session: Mock async database session.
+
+    Returns:
+        TestClient: Test client without auth override.
+    """
+
+    async def override_get_session():
+        yield mock_db_session
+
+    app.dependency_overrides[get_async_session] = override_get_session
+    # No auth override -- real BearerAuth is used.
 
     yield TestClient(app)
 
@@ -104,6 +137,76 @@ def _make_db_row() -> MagicMock:
     row.energy_import_kwh = 123.456
     row.energy_export_kwh = 78.9
     return row
+
+
+# ---------------------------------------------------------------------------
+# STORY-016 AC1: Bearer auth enforcement on GET /v1/realtime
+# ---------------------------------------------------------------------------
+
+
+class TestRealtimeAuth:
+    """Tests for Bearer token authentication on the realtime endpoint."""
+
+    def test_missing_auth_returns_401(
+        self,
+        unauth_client: TestClient,
+    ) -> None:
+        """AC1: Missing Authorization header returns 401."""
+        response = unauth_client.get(f"/v1/realtime?device_id={DEVICE_ID}")
+        assert response.status_code == 401
+
+    def test_invalid_token_returns_401(
+        self,
+        unauth_client: TestClient,
+    ) -> None:
+        """AC1: Invalid Bearer token returns 401."""
+        response = unauth_client.get(
+            f"/v1/realtime?device_id={DEVICE_ID}",
+            headers={"Authorization": "Bearer wrong-token"},
+        )
+        assert response.status_code == 401
+
+    def test_device_id_mismatch_returns_403(
+        self,
+        mock_db_session: AsyncMock,
+    ) -> None:
+        """AC4: Query device_id != authenticated device_id returns 403."""
+
+        async def override_get_session():
+            yield mock_db_session
+
+        async def override_device_id():
+            return "other-device"
+
+        app.dependency_overrides[get_async_session] = override_get_session
+        app.dependency_overrides[get_current_device_id] = override_device_id
+
+        try:
+            c = TestClient(app)
+            response = c.get(f"/v1/realtime?device_id={DEVICE_ID}")
+            assert response.status_code == 403
+            assert "mismatch" in response.json()["detail"].lower()
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_valid_auth_with_matching_device_id_succeeds(
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
+    ) -> None:
+        """AC6: Valid auth with matching device_id returns 200."""
+        cached_json = json.dumps(SAMPLE_DICT)
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = cached_json
+
+        with patch(
+            "src.api.realtime.get_redis",
+            new_callable=AsyncMock,
+            return_value=mock_redis,
+        ):
+            response = client.get(f"/v1/realtime?device_id={DEVICE_ID}")
+
+        assert response.status_code == 200
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +351,7 @@ class TestCacheMissNoData:
             return_value=mock_redis,
         ):
             response = client.get(
-                "/v1/realtime?device_id=unknown-device",
+                f"/v1/realtime?device_id={DEVICE_ID}",
             )
 
         assert response.status_code == 404

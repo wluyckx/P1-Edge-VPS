@@ -1,6 +1,6 @@
 # Architecture.md — P1-Edge-VPS Energy Telemetry Platform
 
-**Last Updated**: 2026-02-13
+**Last Updated**: 2026-02-14
 
 ---
 
@@ -244,10 +244,11 @@ P1-Edge-VPS/
 8. Redis cache invalidated for affected device
 
 ### Flow: Realtime Query (Client → VPS)
-1. Client sends GET `/v1/realtime?device_id={id}`
-2. Redis cache checked first — on hit, return cached value (<100ms)
-3. On miss, query latest row from TimescaleDB, cache result with short TTL
-4. Return JSON response with latest power reading and timestamp
+1. Client sends GET `/v1/realtime?device_id={id}` with Bearer token
+2. VPS validates Bearer token, extracts authenticated device_id, verifies it matches query param
+3. Redis cache checked first — on hit, return cached value (<100ms)
+4. On miss, query latest row from TimescaleDB, cache result with short TTL
+5. Return JSON response with latest power reading and timestamp
 
 ### Flow: Offline Resilience (Edge Buffering)
 1. Edge Poller continues polling HomeWizard P1 regardless of VPS connectivity
@@ -274,7 +275,7 @@ P1-Edge-VPS/
 | API framework | FastAPI | Async-native, auto OpenAPI, Pydantic validation built-in |
 | TLS termination | Caddy | Automatic HTTPS with Let's Encrypt, minimal configuration |
 | Edge-to-VPS transport | HTTPS POST (batched) | Simple, reliable, firewall-friendly (outbound only from edge) |
-| Authentication | Per-device Bearer token | Simple, stateless, sufficient for device auth |
+| Authentication | Per-device Bearer token (all endpoints) | Simple, stateless, sufficient for device auth; protects private energy data |
 | Idempotency key | (device_id, ts) composite PK | Natural dedup key — same measurement can't occur twice |
 | Two-repo-in-one | Monorepo (edge/ + vps/) | Shared types, easier to manage stories and dependencies |
 | Python for both | Python 3.12+ | Same language for edge and VPS reduces cognitive overhead |

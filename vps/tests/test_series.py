@@ -1,12 +1,13 @@
 """
-Tests for the series API endpoint (STORY-012, STORY-013).
+Tests for the series API endpoint (STORY-012, STORY-013, STORY-016).
 
 Validates GET /v1/series: frame parameter validation, aggregated series
-response structure, empty data handling, and all supported time frames
-(day, month, year, all). Verifies that queries target continuous aggregate
-views (p1_hourly, p1_daily, p1_monthly) instead of raw p1_samples.
+response structure, empty data handling, all supported time frames
+(day, month, year, all), continuous aggregate view targeting, and
+Bearer auth enforcement (401/403).
 
 CHANGELOG:
+- 2026-02-14: Add Bearer auth tests (401/403) and update fixtures (STORY-016)
 - 2026-02-13: Update tests for continuous aggregate views (STORY-013)
 - 2026-02-13: Initial creation (STORY-012)
 
@@ -18,6 +19,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+from src.api.deps import get_current_device_id
 from src.db.session import get_async_session
 from src.main import app
 
@@ -109,7 +111,10 @@ def empty_db_session() -> AsyncMock:
 
 @pytest.fixture()
 def client(mock_db_session: AsyncMock) -> TestClient:
-    """Create a TestClient with mocked DB session (no auth needed).
+    """Create a TestClient with mocked DB session and auth dependency.
+
+    Auth dependency is overridden to return 'dev1' as the authenticated
+    device_id, matching the DEVICE_TOKENS configuration.
 
     Args:
         mock_db_session: Mock async database session.
@@ -121,7 +126,11 @@ def client(mock_db_session: AsyncMock) -> TestClient:
     async def override_get_session():
         yield mock_db_session
 
+    async def override_device_id():
+        return "dev1"
+
     app.dependency_overrides[get_async_session] = override_get_session
+    app.dependency_overrides[get_current_device_id] = override_device_id
 
     yield TestClient(app)
 
@@ -131,6 +140,9 @@ def client(mock_db_session: AsyncMock) -> TestClient:
 @pytest.fixture()
 def empty_client(empty_db_session: AsyncMock) -> TestClient:
     """Create a TestClient with mocked DB session returning no data.
+
+    Auth dependency is overridden to return 'dev1' as the authenticated
+    device_id.
 
     Args:
         empty_db_session: Mock async database session with empty results.
@@ -142,11 +154,108 @@ def empty_client(empty_db_session: AsyncMock) -> TestClient:
     async def override_get_session():
         yield empty_db_session
 
+    async def override_device_id():
+        return "dev1"
+
     app.dependency_overrides[get_async_session] = override_get_session
+    app.dependency_overrides[get_current_device_id] = override_device_id
 
     yield TestClient(app)
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def unauth_client(mock_db_session: AsyncMock) -> TestClient:
+    """Create a TestClient with mocked DB but NO auth override.
+
+    Uses the real BearerAuth dependency so auth failures can be tested.
+
+    Args:
+        mock_db_session: Mock async database session.
+
+    Returns:
+        TestClient: Test client without auth override.
+    """
+
+    async def override_get_session():
+        yield mock_db_session
+
+    app.dependency_overrides[get_async_session] = override_get_session
+    # No auth override -- real BearerAuth is used.
+
+    yield TestClient(app)
+
+    app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# STORY-016 AC3: Bearer auth enforcement on GET /v1/series
+# ---------------------------------------------------------------------------
+
+
+class TestSeriesAuth:
+    """Tests for Bearer token authentication on the series endpoint."""
+
+    def test_missing_auth_returns_401(
+        self,
+        unauth_client: TestClient,
+    ) -> None:
+        """AC3: Missing Authorization header returns 401."""
+        response = unauth_client.get(
+            "/v1/series",
+            params={"device_id": "dev1", "frame": "day"},
+        )
+        assert response.status_code == 401
+
+    def test_invalid_token_returns_401(
+        self,
+        unauth_client: TestClient,
+    ) -> None:
+        """AC3: Invalid Bearer token returns 401."""
+        response = unauth_client.get(
+            "/v1/series",
+            params={"device_id": "dev1", "frame": "day"},
+            headers={"Authorization": "Bearer wrong-token"},
+        )
+        assert response.status_code == 401
+
+    def test_device_id_mismatch_returns_403(
+        self,
+        mock_db_session: AsyncMock,
+    ) -> None:
+        """AC4: Query device_id != authenticated device_id returns 403."""
+
+        async def override_get_session():
+            yield mock_db_session
+
+        async def override_device_id():
+            return "other-device"
+
+        app.dependency_overrides[get_async_session] = override_get_session
+        app.dependency_overrides[get_current_device_id] = override_device_id
+
+        try:
+            c = TestClient(app)
+            response = c.get(
+                "/v1/series",
+                params={"device_id": "dev1", "frame": "day"},
+            )
+            assert response.status_code == 403
+            assert "mismatch" in response.json()["detail"].lower()
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_valid_auth_with_matching_device_id_succeeds(
+        self,
+        client: TestClient,
+    ) -> None:
+        """AC6: Valid auth with matching device_id returns 200."""
+        response = client.get(
+            "/v1/series",
+            params={"device_id": "dev1", "frame": "day"},
+        )
+        assert response.status_code == 200
 
 
 # ---------------------------------------------------------------------------

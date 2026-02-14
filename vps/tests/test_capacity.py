@@ -1,11 +1,12 @@
 """
-Tests for the capacity tariff calculation endpoint (STORY-011).
+Tests for the capacity tariff calculation endpoint (STORY-011, STORY-016).
 
 Validates GET /v1/capacity/month/{month}?device_id={id}: 15-minute
 average power peaks (kwartierpiek), monthly peak detection, input
-validation, and empty-data handling.
+validation, empty-data handling, and Bearer auth enforcement (401/403).
 
 CHANGELOG:
+- 2026-02-14: Add Bearer auth tests (401/403) and update fixtures (STORY-016)
 - 2026-02-13: Initial creation (STORY-011)
 
 TODO:
@@ -17,6 +18,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+from src.api.deps import get_current_device_id
 from src.db.session import get_async_session
 from src.main import app
 
@@ -69,9 +71,10 @@ def mock_db_session() -> AsyncMock:
 
 @pytest.fixture()
 def client(mock_db_session: AsyncMock) -> TestClient:
-    """Create a TestClient with mocked DB session.
+    """Create a TestClient with mocked DB session and auth dependency.
 
-    The capacity endpoint does NOT require auth, so no auth override needed.
+    Auth dependency is overridden to return 'dev1' as the authenticated
+    device_id, matching the DEVICE_TOKENS configuration.
 
     Args:
         mock_db_session: Mock async database session.
@@ -83,7 +86,35 @@ def client(mock_db_session: AsyncMock) -> TestClient:
     async def override_get_session():
         yield mock_db_session
 
+    async def override_device_id():
+        return "dev1"
+
     app.dependency_overrides[get_async_session] = override_get_session
+    app.dependency_overrides[get_current_device_id] = override_device_id
+
+    yield TestClient(app)
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def unauth_client(mock_db_session: AsyncMock) -> TestClient:
+    """Create a TestClient with mocked DB but NO auth override.
+
+    Uses the real BearerAuth dependency so auth failures can be tested.
+
+    Args:
+        mock_db_session: Mock async database session.
+
+    Returns:
+        TestClient: Test client without auth override.
+    """
+
+    async def override_get_session():
+        yield mock_db_session
+
+    app.dependency_overrides[get_async_session] = override_get_session
+    # No auth override -- real BearerAuth is used.
 
     yield TestClient(app)
 
@@ -91,7 +122,77 @@ def client(mock_db_session: AsyncMock) -> TestClient:
 
 
 # ---------------------------------------------------------------------------
-# AC6: Invalid month format → 400 Bad Request
+# STORY-016 AC2: Bearer auth enforcement on GET /v1/capacity/month/{month}
+# ---------------------------------------------------------------------------
+
+
+class TestCapacityAuth:
+    """Tests for Bearer token authentication on the capacity endpoint."""
+
+    def test_missing_auth_returns_401(
+        self,
+        unauth_client: TestClient,
+    ) -> None:
+        """AC2: Missing Authorization header returns 401."""
+        response = unauth_client.get(
+            "/v1/capacity/month/2026-02?device_id=dev1",
+        )
+        assert response.status_code == 401
+
+    def test_invalid_token_returns_401(
+        self,
+        unauth_client: TestClient,
+    ) -> None:
+        """AC2: Invalid Bearer token returns 401."""
+        response = unauth_client.get(
+            "/v1/capacity/month/2026-02?device_id=dev1",
+            headers={"Authorization": "Bearer wrong-token"},
+        )
+        assert response.status_code == 401
+
+    def test_device_id_mismatch_returns_403(
+        self,
+        mock_db_session: AsyncMock,
+    ) -> None:
+        """AC4: Query device_id != authenticated device_id returns 403."""
+
+        async def override_get_session():
+            yield mock_db_session
+
+        async def override_device_id():
+            return "other-device"
+
+        app.dependency_overrides[get_async_session] = override_get_session
+        app.dependency_overrides[get_current_device_id] = override_device_id
+
+        try:
+            c = TestClient(app)
+            response = c.get(
+                "/v1/capacity/month/2026-02?device_id=dev1",
+            )
+            assert response.status_code == 403
+            assert "mismatch" in response.json()["detail"].lower()
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_valid_auth_with_matching_device_id_succeeds(
+        self,
+        client: TestClient,
+        mock_db_session: AsyncMock,
+    ) -> None:
+        """AC6: Valid auth with matching device_id returns 200."""
+        result = MagicMock()
+        result.all.return_value = []
+        mock_db_session.execute.return_value = result
+
+        response = client.get(
+            "/v1/capacity/month/2026-02?device_id=dev1",
+        )
+        assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# AC6: Invalid month format -> 400 Bad Request
 # ---------------------------------------------------------------------------
 
 
@@ -99,38 +200,38 @@ class TestCapacityValidation:
     """Tests for month format validation (AC6)."""
 
     def test_invalid_month_single_digit(self, client: TestClient) -> None:
-        """AC6: '2026-1' (missing leading zero) → 400."""
+        """AC6: '2026-1' (missing leading zero) -> 400."""
         response = client.get("/v1/capacity/month/2026-1?device_id=dev1")
         assert response.status_code == 400
 
     def test_invalid_month_text(self, client: TestClient) -> None:
-        """AC6: 'invalid' string → 400."""
+        """AC6: 'invalid' string -> 400."""
         response = client.get("/v1/capacity/month/invalid?device_id=dev1")
         assert response.status_code == 400
 
     def test_invalid_month_reversed(self, client: TestClient) -> None:
-        """AC6: '13-2026' (reversed format) → 400."""
+        """AC6: '13-2026' (reversed format) -> 400."""
         response = client.get("/v1/capacity/month/13-2026?device_id=dev1")
         assert response.status_code == 400
 
     def test_invalid_month_out_of_range(self, client: TestClient) -> None:
-        """AC6: '2026-13' (month 13 does not exist) → 400."""
+        """AC6: '2026-13' (month 13 does not exist) -> 400."""
         response = client.get("/v1/capacity/month/2026-13?device_id=dev1")
         assert response.status_code == 400
 
     def test_invalid_month_zero(self, client: TestClient) -> None:
-        """AC6: '2026-00' (month 0 does not exist) → 400."""
+        """AC6: '2026-00' (month 0 does not exist) -> 400."""
         response = client.get("/v1/capacity/month/2026-00?device_id=dev1")
         assert response.status_code == 400
 
     def test_missing_device_id_returns_422(self, client: TestClient) -> None:
-        """Missing required query param device_id → 422."""
+        """Missing required query param device_id -> 422."""
         response = client.get("/v1/capacity/month/2026-02")
         assert response.status_code == 422
 
 
 # ---------------------------------------------------------------------------
-# AC7: Valid month, no data → 200 with empty peaks
+# AC7: Valid month, no data -> 200 with empty peaks
 # ---------------------------------------------------------------------------
 
 
@@ -159,7 +260,7 @@ class TestCapacityNoData:
 
 
 # ---------------------------------------------------------------------------
-# AC2-AC5: Known data → correct peaks and monthly peak
+# AC2-AC5: Known data -> correct peaks and monthly peak
 # ---------------------------------------------------------------------------
 
 

@@ -2,11 +2,13 @@
 
 <metadata>
   <project>P1-Edge-VPS Energy Telemetry Platform</project>
-  <last_updated>2026-02-13</last_updated>
-  <total_stories>15</total_stories>
-  <done>15</done>
+  <last_updated>2026-02-14</last_updated>
+  <total_stories>16</total_stories>
+  <done>16</done>
   <progress>100%</progress>
   <changelog>
+    <entry date="2026-02-14">STORY-016 done — Bearer auth on all read endpoints (realtime, capacity, series). 12 new auth tests, 284 total. Backlog 100% complete (16/16).</entry>
+    <entry date="2026-02-14">Added STORY-016 (API caller Bearer auth for read endpoints) to protect private energy-consumption data on realtime/capacity/series APIs.</entry>
     <entry date="2026-02-13">All stories complete (15/15). STORY-013 (continuous aggregates), STORY-014 (health checks), STORY-015 (production hardening) done. Quality fixes: weighted average for rebucket aggregation (migration 003), empty batch validation (min_length=1), Makefile venv Python, monorepo test isolation (root pyproject.toml). 269 tests, 0 failures.</entry>
     <entry date="2026-02-13">Wave 4: STORY-010 (realtime) + STORY-011 (capacity tariff) + STORY-012 (historical series) done. Review fixes: explicit DEVICE_ID config, HTTPBearer auto_error=False for 401, eager startup token validation, root Makefile for CI, URL trailing-slash strip. 220 tests, 0 failures.</entry>
     <entry date="2026-02-13">Wave 3: STORY-005 (batch uploader) + STORY-009 (ingest API) done. Review fixes: lazy auth init via get_settings(), poller catch-all exception, normalizer tz-aware enforcement, spool peek guard, token parse warning logs. 168 tests, 0 failures.</entry>
@@ -49,6 +51,7 @@
     <item>TimescaleDB continuous aggregates (STORY-013)</item>
     <item>Health checks and monitoring (STORY-014)</item>
     <item>Production hardening — structured logging, graceful shutdown (STORY-015)</item>
+    <item>API caller authentication for read endpoints (STORY-016)</item>
   </post_mvp>
 </mvp>
 
@@ -131,6 +134,7 @@
   <tier name="Production Readiness" description="Monitoring, hardening, operational readiness">
     <entry priority="14" story="STORY-014" title="Health checks and monitoring" complexity="M" deps="STORY-005, STORY-009" />
     <entry priority="15" story="STORY-015" title="Production hardening" complexity="M" deps="STORY-005, STORY-009" />
+    <entry priority="16" story="STORY-016" title="API caller Bearer auth for read endpoints" complexity="M" deps="STORY-008, STORY-010, STORY-011, STORY-012" />
   </tier>
 </priority_order>
 
@@ -770,6 +774,50 @@
   </notes>
 </story>
 
+<story id="STORY-016" status="done" complexity="M" tdd="required">
+  <title>API caller Bearer auth for read endpoints</title>
+  <dependencies>STORY-008, STORY-010, STORY-011, STORY-012</dependencies>
+  <description>
+    Protect private energy-consumption data by requiring Bearer token authentication
+    on read endpoints. Reuse the existing token-to-device mapping and ensure callers
+    can only access data for the authenticated device_id.
+  </description>
+  <acceptance_criteria>
+    <ac id="AC1">GET /v1/realtime requires Bearer auth and returns 401 on missing/invalid token</ac>
+    <ac id="AC2">GET /v1/capacity/month/{month} requires Bearer auth and returns 401 on missing/invalid token</ac>
+    <ac id="AC3">GET /v1/series requires Bearer auth and returns 401 on missing/invalid token</ac>
+    <ac id="AC4">Client-supplied device_id must match authenticated device_id; mismatch returns 403</ac>
+    <ac id="AC5">OpenAPI docs show Bearer security scheme for all protected read endpoints</ac>
+    <ac id="AC6">No behavior regression for valid authenticated callers (same 200/400/404 semantics)</ac>
+  </acceptance_criteria>
+  <allowed_scope>
+    <file>vps/src/api/realtime.py</file>
+    <file>vps/src/api/capacity.py</file>
+    <file>vps/src/api/series.py</file>
+    <file>vps/src/api/deps.py</file>
+    <file>vps/tests/test_realtime.py</file>
+    <file>vps/tests/test_capacity.py</file>
+    <file>vps/tests/test_series.py</file>
+  </allowed_scope>
+  <test_first>
+    <item>Add tests FIRST for 401 on missing/invalid auth on each read endpoint</item>
+    <item>Add tests for 403 when requested device_id differs from authenticated device_id</item>
+    <item>Add tests for successful authenticated requests preserving existing response contracts</item>
+    <item>Tests must FAIL before implementation</item>
+  </test_first>
+  <test_plan>
+    - Endpoint tests for auth-required behavior (401/403/200)
+    - Regression tests to preserve frame/month validation and not-found semantics
+    - OpenAPI schema check for Bearer security on protected routes
+    - pytest vps/tests/ -q all pass
+  </test_plan>
+  <notes>
+    - Reuse CurrentDeviceId dependency from STORY-008
+    - Do not trust caller-provided device_id for authorization decisions
+    - Keep ingest auth behavior unchanged
+  </notes>
+</story>
+
 </phase>
 
 <!-- ============================================================ -->
@@ -781,9 +829,9 @@
     <phase id="1" name="Edge Foundation" stories="5" done="5" progress="100%" link="stories/phase-1-edge-foundation.md" />
     <phase id="2" name="VPS Foundation" stories="4" done="4" progress="100%" link="stories/phase-2-vps-foundation.md" />
     <phase id="3" name="API Features" stories="4" done="4" progress="100%" link="stories/phase-3-api-features.md" />
-    <phase id="4" name="Production Readiness" stories="2" done="2" progress="100%" />
+    <phase id="4" name="Production Readiness" stories="3" done="3" progress="100%" />
   </phase_summary>
-  <total stories="15" done="15" progress="100%" />
+  <total stories="16" done="16" progress="100%" />
 </progress>
 
 <!-- ============================================================ -->
@@ -807,13 +855,14 @@ STORY-006 (VPS scaffolding)
 │   ├── STORY-009 (Ingest API)
 │   └── STORY-013 (Continuous aggregates)
 └── STORY-008 (Device auth)
-    └── STORY-009 (Ingest API)
-        ├── STORY-010 (Realtime endpoint)
-        ├── STORY-011 (Capacity tariff)
-        ├── STORY-012 (Historical series)
-        │   └── STORY-013 (Continuous aggregates)
-        ├── STORY-014 (Health checks)
-        └── STORY-015 (Production hardening)
+    ├── STORY-009 (Ingest API)
+    │   ├── STORY-010 (Realtime endpoint)
+    │   ├── STORY-011 (Capacity tariff)
+    │   ├── STORY-012 (Historical series)
+    │   │   └── STORY-013 (Continuous aggregates)
+    │   ├── STORY-014 (Health checks)
+    │   └── STORY-015 (Production hardening)
+    └── STORY-016 (Read API caller Bearer auth)
 
 Note: STORY-001 and STORY-006 have no dependencies and can be parallelized.
       STORY-002, STORY-003, STORY-004 can be parallelized (all depend only on STORY-001).
