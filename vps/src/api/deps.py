@@ -5,22 +5,28 @@ Provides database sessions, Redis clients, and authentication dependencies
 for use with FastAPI's Depends() mechanism.
 
 CHANGELOG:
+- 2026-02-14: Use Security(HTTPBearer) for OpenAPI security metadata (STORY-016 AC5)
 - 2026-02-13: Initial creation (STORY-006)
 - 2026-02-13: Add database session dependency (STORY-007)
 - 2026-02-13: Add CurrentDeviceId auth dependency (STORY-008)
 - 2026-02-13: Fix: lazy auth init via get_settings() (review finding #1)
 
 TODO:
-- Add Redis client dependency (STORY-009)
+- None
 """
 
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Security
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.auth.bearer import BearerAuth, parse_device_tokens
+from src.auth.bearer import (
+    BearerAuth,
+    parse_device_tokens,
+    verify_bearer_token,
+)
 from src.config import get_settings
 from src.db.session import get_async_session
 
@@ -45,10 +51,15 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 # ---------------------------------------------------------------------------
-# Authentication dependency (STORY-008)
+# Authentication dependency (STORY-008, STORY-016)
 # ---------------------------------------------------------------------------
 
 _bearer_auth: BearerAuth | None = None
+
+# Module-level HTTPBearer scheme so FastAPI registers it in OpenAPI
+# securitySchemes (AC5). auto_error=False lets us return 401 ourselves
+# instead of FastAPI's default 403.
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def init_bearer_auth() -> BearerAuth:
@@ -72,21 +83,40 @@ def init_bearer_auth() -> BearerAuth:
     return _bearer_auth
 
 
-async def get_current_device_id(request: Request) -> str:
-    """FastAPI dependency that validates Bearer token and returns device_id.
+async def get_current_device_id(
+    credentials: HTTPAuthorizationCredentials | None = Security(_bearer_scheme),
+) -> str:
+    """FastAPI dependency: validates Bearer token → returns device_id.
 
-    Lazily initializes the BearerAuth instance on first request.
+    Uses Security(HTTPBearer) so the scheme appears in OpenAPI docs.
+    Lazily initializes the token map on first request.
 
     Args:
-        request: The incoming FastAPI request.
+        credentials: Extracted by FastAPI from the Authorization header.
 
     Returns:
         str: The device_id associated with the valid Bearer token.
+
+    Raises:
+        HTTPException: 401 if credentials are missing or token invalid.
     """
+    if credentials is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing authorization credentials.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     auth = init_bearer_auth()
-    return await auth.verify(request)
+    device_id = verify_bearer_token(credentials.credentials, auth.token_map)
+    if device_id is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return device_id
 
 
-# Annotated dependency for use in FastAPI route signatures (AC6):
+# Annotated dependency for use in FastAPI route signatures:
 #   async def my_endpoint(device_id: CurrentDeviceId): ...
 CurrentDeviceId = Annotated[str, Depends(get_current_device_id)]

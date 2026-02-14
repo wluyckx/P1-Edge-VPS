@@ -1,11 +1,13 @@
 """
-Tests for Bearer token authentication (STORY-008).
+Tests for Bearer token authentication (STORY-008, STORY-016).
 
 Validates that the auth dependency correctly authenticates devices using
 Bearer tokens from the Authorization header, with tokens parsed from the
-DEVICE_TOKENS environment variable.
+DEVICE_TOKENS environment variable. Also verifies that OpenAPI schema
+advertises the Bearer security scheme on all protected endpoints.
 
 CHANGELOG:
+- 2026-02-14: Add OpenAPI security scheme tests (STORY-016 AC5)
 - 2026-02-13: Initial creation (STORY-008)
 
 TODO:
@@ -212,3 +214,44 @@ class TestConstantTimeComparison:
 
         mock_cmp.assert_called()
         assert result == "device-1"
+
+
+# ---------------------------------------------------------------------------
+# Tests for OpenAPI security scheme (STORY-016 AC5)
+# ---------------------------------------------------------------------------
+
+
+class TestOpenApiSecurityScheme:
+    """Verify OpenAPI advertises Bearer auth on protected endpoints."""
+
+    def test_security_schemes_contains_http_bearer(self) -> None:
+        """AC5: securitySchemes defines HTTPBearer scheme."""
+        from src.main import app
+
+        schema = app.openapi()
+        schemes = schema["components"]["securitySchemes"]
+        assert "HTTPBearer" in schemes
+        assert schemes["HTTPBearer"]["type"] == "http"
+        assert schemes["HTTPBearer"]["scheme"] == "bearer"
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/v1/realtime",
+            "/v1/capacity/month/{month}",
+            "/v1/series",
+            "/v1/ingest",
+        ],
+    )
+    def test_protected_endpoint_has_security(self, path: str) -> None:
+        """AC5: Each protected endpoint declares security."""
+        from src.main import app
+
+        schema = app.openapi()
+        methods = schema["paths"][path]
+        # get or post — pick whichever method exists
+        op = methods.get("get") or methods.get("post")
+        assert op is not None, f"No operation for {path}"
+        assert "security" in op, f"{path} missing security in OpenAPI"
+        scheme_names = [list(s.keys())[0] for s in op["security"]]
+        assert "HTTPBearer" in scheme_names
