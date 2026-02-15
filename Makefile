@@ -1,4 +1,4 @@
-.PHONY: test test-edge test-vps lint format check
+.PHONY: test test-edge test-vps lint format secrets check
 
 PYTHON := .venv/bin/python
 
@@ -20,5 +20,9 @@ lint:
 format:
 	ruff format --check edge/src/ edge/tests/ vps/src/ vps/tests/
 
-# Combined check (lint + format + test)
-check: lint format test
+# High-confidence secret scan (fails on likely real credentials/keys)
+secrets:
+	./scripts/secret_scan.sh
+
+# Combined check (lint + format + secrets + test)
+check: lint format secrets test

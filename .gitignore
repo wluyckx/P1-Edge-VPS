@@ -15,8 +15,8 @@ env/
 
 # Environment files (secrets)
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 # IDE
 .vscode/
@@ -44,3 +44,6 @@ docker-compose.override.yml
 
 # Ruff
 .ruff_cache/
+
+# Local agent/editor metadata
+.claude/

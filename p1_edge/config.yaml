@@ -1,0 +1,34 @@
+name: P1 Edge Daemon
+version: "0.1.0"
+slug: p1_edge
+description: Poll HomeWizard P1 and upload telemetry to VPS
+url: https://github.com/Wim/P1-Edge-VPS
+startup: services
+boot: auto
+init: false
+arch:
+  - aarch64
+  - amd64
+  - armv7
+map:
+  - addon_config:rw
+options:
+  hw_p1_host: "192.168.1.100"
+  hw_p1_token: "change-me"
+  vps_ingest_url: "https://your-domain.example.com"
+  vps_device_token: "change-me"
+  poll_interval_s: 2
+  device_id: ""
+  batch_size: 30
+  upload_interval_s: 10
+  spool_path: "/data/spool.db"
+schema:
+  hw_p1_host: str
+  hw_p1_token: password
+  vps_ingest_url: str
+  vps_device_token: password
+  poll_interval_s: int(1,)
+  device_id: str?
+  batch_size: int(1,1000)
+  upload_interval_s: int(1,)
+  spool_path: str
