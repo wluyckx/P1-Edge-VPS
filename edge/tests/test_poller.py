@@ -51,7 +51,7 @@ def success_response(hw_responses: dict) -> dict:
 
 _HOST = "192.168.1.100"
 _TOKEN = "test-bearer-token"
-_EXPECTED_URL = f"http://{_HOST}/api/measurement"
+_EXPECTED_URL = f"https://{_HOST}/api/measurement"
 
 
 def _mock_response(
@@ -111,7 +111,7 @@ class TestPollMeasurementSuccess:
         )
 
     def test_sends_request_to_correct_url(self, success_response: dict) -> None:
-        """poll_measurement targets http://{host}/api/measurement."""
+        """poll_measurement targets https://{host}/api/measurement."""
         mock_resp = _mock_response(status_code=200, json_data=success_response)
 
         with patch("edge.src.poller.httpx.Client") as MockClient:
@@ -121,7 +121,7 @@ class TestPollMeasurementSuccess:
             poll_measurement(host="10.0.0.50", token="other-token")
 
         call_args = client_instance.get.call_args
-        assert call_args[0][0] == "http://10.0.0.50/api/measurement"
+        assert call_args[0][0] == "https://10.0.0.50/api/measurement"
 
     def test_zero_power_response(self, hw_responses: dict) -> None:
         """Zero-power reading is returned correctly (not treated as falsy)."""
@@ -287,7 +287,7 @@ class TestPollMeasurementTimeout:
 
             poll_measurement(host=_HOST, token=_TOKEN)
 
-        MockClient.assert_called_once_with(timeout=5.0)
+        MockClient.assert_called_once_with(timeout=5.0, verify=False)
 
     def test_custom_timeout(self, success_response: dict) -> None:
         """Custom timeout value is forwarded to httpx.Client."""
@@ -299,4 +299,4 @@ class TestPollMeasurementTimeout:
 
             poll_measurement(host=_HOST, token=_TOKEN, timeout=10.0)
 
-        MockClient.assert_called_once_with(timeout=10.0)
+        MockClient.assert_called_once_with(timeout=10.0, verify=False)

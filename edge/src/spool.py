@@ -21,6 +21,7 @@ TODO:
 """
 
 import sqlite3
+import threading
 from pathlib import Path
 
 _CREATE_TABLE_SQL = """\
@@ -68,12 +69,14 @@ class Spool:
 
     def __init__(self, path: str | Path) -> None:
         self._path = Path(path)
-        self._conn = sqlite3.connect(str(self._path))
+        self._lock = threading.RLock()
+        self._conn = sqlite3.connect(str(self._path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
-        # Enable WAL mode for concurrent read/write (HC-001 durability).
-        self._conn.execute("PRAGMA journal_mode=WAL;")
-        self._conn.execute(_CREATE_TABLE_SQL)
-        self._conn.commit()
+        with self._lock:
+            # Enable WAL mode for concurrent read/write (HC-001 durability).
+            self._conn.execute("PRAGMA journal_mode=WAL;")
+            self._conn.execute(_CREATE_TABLE_SQL)
+            self._conn.commit()
 
     # ------------------------------------------------------------------
     # Public API
@@ -97,8 +100,9 @@ class Spool:
             "energy_import_kwh": sample.get("energy_import_kwh"),
             "energy_export_kwh": sample.get("energy_export_kwh"),
         }
-        self._conn.execute(_INSERT_SQL, params)
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(_INSERT_SQL, params)
+            self._conn.commit()
 
     def peek(self, n: int) -> list[dict]:
         """Return up to *n* oldest pending samples without removing them.
@@ -116,8 +120,9 @@ class Spool:
         """
         if n < 1:
             return []
-        cursor = self._conn.execute(_PEEK_SQL, {"limit": n})
-        return [dict(row) for row in cursor.fetchall()]
+        with self._lock:
+            cursor = self._conn.execute(_PEEK_SQL, {"limit": n})
+            return [dict(row) for row in cursor.fetchall()]
 
     def ack(self, rowids: list[int]) -> None:
         """Delete confirmed rows from the spool.
@@ -133,8 +138,9 @@ class Spool:
         # Use parameterized placeholders to prevent SQL injection (SKILL.md).
         placeholders = ",".join("?" for _ in rowids)
         sql = f"DELETE FROM spool WHERE rowid IN ({placeholders});"  # noqa: S608
-        self._conn.execute(sql, rowids)
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(sql, rowids)
+            self._conn.commit()
 
     def count(self) -> int:
         """Return the number of pending (unacknowledged) samples.
@@ -142,8 +148,9 @@ class Spool:
         Returns:
             Integer count of rows in the spool table.
         """
-        cursor = self._conn.execute(_COUNT_SQL)
-        return cursor.fetchone()[0]
+        with self._lock:
+            cursor = self._conn.execute(_COUNT_SQL)
+            return cursor.fetchone()[0]
 
     def close(self) -> None:
         """Close the underlying SQLite connection.
@@ -151,4 +158,5 @@ class Spool:
         After calling close, no further operations should be performed
         on this Spool instance.
         """
-        self._conn.close()
+        with self._lock:
+            self._conn.close()

@@ -1,7 +1,7 @@
 """
 HomeWizard P1 meter poller — reads real-time measurements via Local API v2.
 
-Sends an HTTP GET with Bearer token to ``http://{host}/api/measurement``
+Sends an HTTPS GET with Bearer token to ``https://{host}/api/measurement``
 and returns the parsed JSON dict. All network and HTTP errors are caught
 and logged at WARNING level so the poll loop never crashes.
 
@@ -30,7 +30,7 @@ def poll_measurement(
 ) -> dict | None:
     """Poll the HomeWizard P1 meter for the latest measurement.
 
-    Sends ``GET http://{host}/api/measurement`` with an
+    Sends ``GET https://{host}/api/measurement`` with an
     ``Authorization: Bearer {token}`` header.
 
     Args:
@@ -42,11 +42,13 @@ def poll_measurement(
     Returns:
         Parsed JSON dict on HTTP 200, or ``None`` on any error.
     """
-    url = f"http://{host}/api/measurement"
+    url = f"https://{host}/api/measurement"
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        with httpx.Client(timeout=timeout) as client:
+        # HomeWizard local API uses a local certificate that may not validate
+        # in constrained environments; align behavior with curl -k.
+        with httpx.Client(timeout=timeout, verify=False) as client:
             response = client.get(url, headers=headers)
             response.raise_for_status()
             return response.json()
