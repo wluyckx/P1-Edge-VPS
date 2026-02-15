@@ -1,4 +1,4 @@
 {$DOMAIN} {
-    reverse_proxy /v1/* api:8000
+    reverse_proxy /v1/* p1_api:8000
     # /health remains internal (curl inside VPS host/container)
 }

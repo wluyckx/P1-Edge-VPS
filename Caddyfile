@@ -1,3 +1,3 @@
 {$VPS_DOMAIN:your-domain.example.com} {
-    reverse_proxy api:8000
+    reverse_proxy p1_api:8000
 }
