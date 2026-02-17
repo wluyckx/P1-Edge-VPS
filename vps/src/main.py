@@ -24,6 +24,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.capacity import router as capacity_router
 from src.api.deps import init_bearer_auth
@@ -63,6 +64,13 @@ app = FastAPI(
     description="Energy telemetry API for HomeWizard P1 meter data.",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://dashboard.energy.wimluyckx.dev"],
+    allow_methods=["GET"],
+    allow_headers=["Authorization"],
 )
 
 app.include_router(capacity_router)
