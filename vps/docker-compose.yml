@@ -30,19 +30,6 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - api
-
 networks:
   edge:
     name: edge
@@ -50,5 +37,3 @@ networks:
 
 volumes:
   pgdata:
-  caddy_data:
-  caddy_config:
