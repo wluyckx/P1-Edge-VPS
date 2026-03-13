@@ -12,6 +12,7 @@ CHANGELOG:
 - 2026-02-13: Register capacity router (STORY-011)
 - 2026-02-13: Register series router (STORY-012)
 - 2026-02-13: Add startup lifespan to eagerly validate DEVICE_TOKENS
+- 2026-03-13: Register daily-energy router (fix 0.0 kWh on Hestia home tile)
 - 2026-02-13: Register health router (STORY-014)
 - 2026-02-13: Structured JSON logging, graceful shutdown logging (STORY-015)
 
@@ -27,6 +28,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.capacity import router as capacity_router
+from src.api.daily_energy import router as daily_energy_router
 from src.api.deps import init_bearer_auth
 from src.api.health import router as health_router
 from src.api.ingest import router as ingest_router
@@ -74,6 +76,7 @@ app.add_middleware(
 )
 
 app.include_router(capacity_router)
+app.include_router(daily_energy_router)
 app.include_router(health_router)
 app.include_router(ingest_router)
 app.include_router(realtime_router)
