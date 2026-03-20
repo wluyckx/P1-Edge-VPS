@@ -174,7 +174,7 @@ async def get_aggregated_series(
         params["end"] = end
 
     if rebucket is not None:
-        base_sql += " GROUP BY bucket ORDER BY bucket"
+        base_sql += " GROUP BY 1 ORDER BY 1"
     else:
         base_sql += " ORDER BY bucket"
 
