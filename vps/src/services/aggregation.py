@@ -7,6 +7,7 @@ year, and all-time frames. Queries pre-computed materialized views
 (p1_hourly, p1_daily, p1_monthly) for improved performance.
 
 CHANGELOG:
+- 2026-03-20: Add week frame, fix rebucket interval type (BPPA-119, BPPA-118)
 - 2026-02-13: Fix average-of-averages: use weighted avg in rebucket (quality fix #1)
 - 2026-02-13: Query continuous aggregates instead of raw p1_samples (STORY-013)
 - 2026-02-13: Initial creation (STORY-012)
@@ -32,9 +33,14 @@ FRAME_CONFIG = {
         "rebucket": None,
         "range": "today",
     },
+    "week": {
+        "view": "p1_daily",
+        "rebucket": None,
+        "range": "current_week",
+    },
     "month": {
         "view": "p1_daily",
-        "rebucket": "1 week",
+        "rebucket": timedelta(weeks=1),
         "range": "current_month",
     },
     "year": {
@@ -69,6 +75,15 @@ def _get_date_range(
     if range_type == "today":
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end = start + timedelta(days=1)
+        return start, end
+
+    if range_type == "current_week":
+        # ISO week: Monday = 0
+        days_since_monday = now.weekday()
+        start = (now - timedelta(days=days_since_monday)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        end = start + timedelta(days=7)
         return start, end
 
     if range_type == "current_month":
